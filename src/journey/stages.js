@@ -32,6 +32,22 @@ function smoothPos(route, distAt, t, span = [-1.2, 0, 1.2, 2.4]) {
   return p;
 }
 
+/** Vitesse d'animation des marches en ville : constante (10 m/s), plafonnée à 40 s pour les longs trajets. */
+const cityWalkSpeed = (len) => Math.max(10, len / 40);
+
+/**
+ * Caméra de suivi « trois-quarts arrière » : derrière le voyageur, un peu au-dessus,
+ * cap lissé sur ±35 m de trajet pour ne pas tourner à chaque coin de rue.
+ */
+function followCam(route, d, { pitch = 0.6, dist = 150, ahead = 8 } = {}) {
+  const p = route.posAt(d);
+  const h = route.posAt(Math.min(route.length, d + 35)).sub(route.posAt(Math.max(0, d - 20)));
+  h.y = 0;
+  if (h.lengthSq() < 1) return { target: p, pitch, dist };
+  const yaw = Math.atan2(-h.x, -h.z);
+  return { target: p.add(h.setLength(ahead)), yaw, pitch, dist };
+}
+
 function walker({ group, route, revealStart = 0, revealDur = 1.6, walkStart, ribbonWidth = 1.0, scale = 1 }) {
   const ribbon = new PathRibbon(route, { width: ribbonWidth, scale });
   group.add(ribbon.object);
@@ -134,8 +150,8 @@ export function stageDeparture(ctx) {
       if (t < walkStart) return { target: hall, yaw: 0.32, pitch: 0.95, dist: 105 };
       const p = smoothPos(route, w.dist, t);
       const under = p.y < -1.5 ? 1 : 0;
-      if (t > w.end - 0.5) return { target: V(boardX - 8, 0, boardZ[quai] - 1), yaw: 0.55, pitch: 0.85, dist: 92 };
-      return { target: p.add(V(0, 0, -4)), yaw: 0.35 + under * 0.15, pitch: 0.98 + under * 0.1, dist: 80 - under * 12 };
+      if (t > w.end - 0.5) return { target: V(boardX - 8, 0, boardZ[quai] - 1), yaw: 0.55, pitch: 0.62, dist: 80 };
+      return { target: p.add(V(0, 0, -4)), yaw: 0.35 + under * 0.15, pitch: 0.78 + under * 0.15, dist: 72 - under * 10 };
     },
     overview: { target: V(0, 0, -4), yaw: 0.35, pitch: 0.98, dist: 190 },
     focus(t) { return w.pos(t); },
@@ -165,36 +181,24 @@ export function stageTrain(ctx) {
   group.add(line);
   const segCount = line.geometry.index ? line.geometry.index.count / (pts.length - 1) : 0;
 
-  // horaires d'animation : intro, segments, arrêts
+  // mouvement continu : départ et arrivée adoucis, passage sans arrêt devant les gares intermédiaires
   const intro = 3.2;
-  const dwell = 1.5;
-  const segDur = [];
-  for (let i = 0; i < names.length - 1; i++) {
-    const a = pts[stopIdx[i]], b = pts[stopIdx[i + 1]];
-    segDur.push(2.6 + a.distanceTo(b) / 55);
-  }
-  const keys = []; // {t, idx, minutes}
-  let t = intro;
-  keys.push({ t, i: stopIdx[0], m: times[0] });
-  for (let i = 0; i < segDur.length; i++) {
-    t += segDur[i];
-    keys.push({ t, i: stopIdx[i + 1], m: times[i + 1], move: true });
-    if (i < segDur.length - 1) { t += dwell; keys.push({ t, i: stopIdx[i + 1], m: times[i + 1] }); }
-  }
-  const arriveT = t;
+  const i0 = stopIdx[0], i1 = stopIdx[stopIdx.length - 1];
+  const travel = 7 + pts[i0].distanceTo(pts[i1]) / 40;
+  const arriveT = intro + travel;
   const duration = arriveT + 3.5;
-
-  const fIdx = (tt) => {
-    if (tt <= keys[0].t) return stopIdx[0];
-    for (let k = 1; k < keys.length; k++) {
-      if (tt <= keys[k].t) {
-        const a = keys[k - 1], b = keys[k];
-        if (!b.move) return a.i;
-        return a.i + (b.i - a.i) * smoother((tt - a.t) / (b.t - a.t));
-      }
-    }
-    return stopIdx[stopIdx.length - 1];
+  const RAMP = 0.12; // part du trajet en accélération / freinage
+  const ease = (s) => { // vitesse constante au milieu, rampes aux extrémités
+    s = clamp01(s);
+    const v = 1 / (1 - RAMP);
+    if (s < RAMP) return (v * s * s) / (2 * RAMP);
+    if (s > 1 - RAMP) return 1 - (v * (1 - s) * (1 - s)) / (2 * RAMP);
+    return v * (s - RAMP / 2);
   };
+  const fIdx = (tt) => i0 + (i1 - i0) * ease((tt - intro) / travel);
+  // instant de passage à un point du tracé (recherche par dichotomie)
+  const tAtIdx = (idx) => { let a = intro, b = arriveT; for (let k = 0; k < 30; k++) { const m = (a + b) / 2; if (fIdx(m) < idx) a = m; else b = m; } return (a + b) / 2; };
+  const keys = stopIdx.map((i, k) => ({ t: k === 0 ? intro : tAtIdx(i), i, m: times[k], move: k > 0 }));
   const posAtIdx = (f) => {
     const i = Math.max(0, Math.min(pts.length - 2, Math.floor(f)));
     return pts[i].clone().lerp(pts[i + 1], f - i);
@@ -219,7 +223,7 @@ export function stageTrain(ctx) {
   const cues = [{ t: 0, text: 'Votre train relie les villes', sub: 'Trajet accéléré pour la démonstration' }];
   for (let i = 1; i < names.length; i++) {
     const k = keys.find((kk) => kk.i === stopIdx[i] && kk.move);
-    if (i < names.length - 1) cues.push({ t: k.t - 0.6, text: `Arrêt : ${names[i]}`, sub: `${fmt(times[i])} · restez à bord` });
+    if (i < names.length - 1) cues.push({ t: k.t - 0.6, text: `Gare ${/^[aeiouyhéèêâîôûœ]/i.test(names[i]) ? 'd’' : 'de '}${names[i]}`, sub: `${fmt(times[i])} · restez à bord` });
     else cues.push({ t: k.t - 0.6, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · descendez du train` });
   }
   cues.splice(1, 0, { t: intro - 0.4, text: `Départ de Béthune à ${T.depart}`, sub: `${T.numero} · direction ${T.direction}` });
@@ -245,10 +249,14 @@ export function stageTrain(ctx) {
       line.geometry.setDrawRange(0, Math.round(shown * segCount) + segCount);
     },
     camera(tt) {
-      if (tt < intro - 0.6) return { target: center, yaw: travelYaw * 0.4, pitch: 1.1, dist: span * 1.75 + 120 };
-      if (tt > arriveT - 0.4) return { target: end, yaw: travelYaw, pitch: 0.9, dist: 190 };
-      const p = posAtIdx(fIdx(tt + 0.8));
-      return { target: p, yaw: travelYaw, pitch: 0.95, dist: 230 };
+      if (tt < intro - 0.6) return { target: center, yaw: travelYaw * 0.4, pitch: 0.95, dist: span * 1.6 + 120 };
+      if (tt > arriveT - 0.4) return { target: end, yaw: travelYaw, pitch: 0.6, dist: 170 };
+      // derrière la rame, assez bas pour voir le paysage défiler en profondeur
+      const f = fIdx(tt + 0.8);
+      const p = posAtIdx(f);
+      const ahead = posAtIdx(Math.min(pts.length - 1.001, f + 25)).sub(posAtIdx(Math.max(0, f - 25)));
+      const yaw = ahead.lengthSq() > 1 ? Math.atan2(-ahead.x, -ahead.z) : travelYaw;
+      return { target: p.add(ahead.setLength(30)), yaw, pitch: 0.55, dist: 180 };
     },
     overview: { target: center, yaw: 0, pitch: 1.12, dist: span * 1.8 + 140 },
     focus() { return null; },
@@ -330,6 +338,8 @@ export function stageArrival(ctx) {
     pts[pts.length - 1].cue = leg.mode === 'bus'
       ? { text: `Attendez le ${(leg.vehicule || 'bus').toLowerCase()} ligne ${leg.ligne}`, sub: `Direction ${leg.direction} · départ ${leg.depart}` }
       : { text: 'Votre voiture arrive', sub: `${leg.vehicule} · ${leg.depart}` };
+  } else if (leg.mode === 'gare') {
+    pts[pts.length - 1].cue = { text: 'Vous êtes arrivé', sub: `${dest.nom} · ${leg.arrivee}` };
   } else {
     pts[pts.length - 1].cue = { text: 'Sortez sur le parvis', sub: `Ensuite : ${dest.nom} à pied` };
   }
@@ -398,9 +408,11 @@ export function stageArrival(ctx) {
       if (vehicle && t > w.end - 0.5) return { target: V(endP.x * 0.55, endP.y, (endP.z + 12) / 2), yaw: 0.22, pitch: 0.82, dist: 135 };
       const p = smoothPos(route, w.dist, t);
       const under = p.y < -1.5 ? 1 : 0;
+      // dehors, au-delà du parvis : suivi trois-quarts arrière dans la rue
+      if (Math.hypot(p.x, p.z - 24) > 35 && (p.z > 20 || Math.abs(p.x) > 110)) return followCam(route, w.dist(t + 0.4), { dist: 120, ahead: 25 });
       const outside = p.z > 20 ? 1 : 0;
       const yaw = isTerminus ? (p.z > 16 ? 0.4 : Math.PI - 0.45) : (outside ? 0.25 : 0.35 + under * 0.15);
-      return { target: p, yaw, pitch: 0.98 + under * 0.1, dist: (isTerminus ? 88 : 80) - under * 12 + outside * 20 };
+      return { target: p, yaw, pitch: 0.78 + under * 0.15, dist: (isTerminus ? 80 : 72) - under * 10 + outside * 14 };
     },
     overview: isTerminus ? { target: V(-10, 0, -10), yaw: Math.PI - 0.5, pitch: 0.95, dist: 230 } : { target: V(0, 0, 5), yaw: 0.4, pitch: 0.98, dist: 200 },
     focus(t) { return t > walkStart - 0.5 ? w.pos(t) : null; },
@@ -416,6 +428,7 @@ export function stageArrival(ctx) {
       if (leg.mode === 'voiture') return `<div class="ic-k">Prise en charge</div><div class="ic-v">${leg.nomPoint}</div>
         <div class="ic-k">Véhicule</div><div class="ic-v">${leg.vehicule}</div>
         <div class="ic-k">Rendez-vous</div><div class="ic-v">${leg.depart}</div>`;
+      if (leg.mode === 'gare') return `<div class="ic-k">Destination</div><div class="ic-v">${dest.nom}</div>`;
       return `<div class="ic-k">Ensuite</div><div class="ic-v">À pied jusqu’à ${dest.nom}</div>`;
     },
   };
@@ -455,7 +468,9 @@ export function stageDestination(ctx) {
     const wk0 = world.walks[`${dest.lieu}:${leg.mode}`] || [[rpts[rpts.length - 1][0], rpts[rpts.length - 1][1]]];
     const wk = [...wk0.slice(0, -1), [place.x, place.z]];
     if (wk.length < 2) wk.unshift(rpts[rpts.length - 1]);
-    const wr = new Route(lift(wk).map((p, i) => (i === 0 ? { ...p, cue: { text: `Rejoignez ${dest.nom}`, sub: `${leg.marcheFinale || 1} min à pied` } } : p)), { speeds: { walk: 4 } });
+    const wpts = lift(wk);
+    const wlen = wpts.reduce((s, p, i) => (i ? s + p.p.distanceTo(wpts[i - 1].p) : 0), 0);
+    const wr = new Route(wpts.map((p, i) => (i === 0 ? { ...p, cue: { text: `Rejoignez ${dest.nom}`, sub: `${leg.marcheFinale || 1} min à pied` } } : p)), { speeds: { walk: Math.min(cityWalkSpeed(wlen), Math.max(4, wlen / 6)) } });
     walkStart = 1.4 + rideDur + 0.8;
     walk = walker({ group, route: wr, revealStart: walkStart - 0.8, revealDur: 0.8, walkStart, ribbonWidth: 1.4, scale: 1.4 });
     cues.push(...wr.cues(walkStart));
@@ -466,7 +481,7 @@ export function stageDestination(ctx) {
     pts[0].cue = { text: `Rejoignez ${dest.nom} à pied`, sub: `${Math.round(arrMin - depMin)} min · suivez le chemin` };
     const lenEst = pts.reduce((s, p, i) => (i ? s + p.p.distanceTo(pts[i - 1].p) : 0), 0);
     pts[Math.floor(pts.length / 2)].cue = { text: 'Continuez tout droit', sub: 'Le chemin reste sur les trottoirs' };
-    const wr = new Route(pts, { speeds: { walk: Math.max(7, lenEst / 16) } });
+    const wr = new Route(pts, { speeds: { walk: cityWalkSpeed(lenEst) } });
     walkStart = 1.2;
     walk = walker({ group, route: wr, revealStart: 0, revealDur: 2.4, walkStart, ribbonWidth: 2.6, scale: 2 });
     cues.push(...wr.cues(walkStart));
@@ -483,6 +498,9 @@ export function stageDestination(ctx) {
 
   const tmp = new THREE.Vector3();
   const endP = new THREE.Vector3(place.x, gy, place.z);
+  // à l'arrivée, on garde le cap de la marche (pas de demi-tour brusque de la caméra)
+  const lastDir = walk.route.posAt(walk.route.length).sub(walk.route.posAt(Math.max(0, walk.route.length - 40)));
+  const arriveYaw = lastDir.lengthSq() > 1 ? Math.atan2(-lastDir.x, -lastDir.z) : 0.6;
   return {
     id: 'destination', seg: 'destination', place: dest.nom, world: ctx.city.id, duration, group, labels, cues,
     update(t, time) {
@@ -502,19 +520,14 @@ export function stageDestination(ctx) {
     camera(t) {
       if (t > arriveT - 0.6) {
         const spin = (t - arriveT) * 0.08;
-        return { target: endP, yaw: 0.6 + spin, pitch: 0.7, dist: 200 };
+        return { target: endP, yaw: arriveYaw + spin, pitch: 0.5, dist: 140 };
       }
       if (ride && t < walkStart - 0.3) {
-        const k = smooth(clamp01((t - 1.4 + 1.2) / rideDur));
-        const p = ride.route.posAt(ride.route.length * k);
-        const s = ride.route.posAt(0), e = ride.route.posAt(ride.route.length);
-        const dir = e.clone().sub(s);
-        return { target: p, yaw: Math.atan2(-dir.x, -dir.z) * 0.8, pitch: 0.98, dist: 300 };
+        // derrière le véhicule, un peu plus haut et plus loin (il va plus vite)
+        const k = smooth(clamp01((t - 1.4 + 0.6) / rideDur));
+        return followCam(ride.route, ride.route.length * k, { pitch: 0.65, dist: 220, ahead: 50 });
       }
-      const p = smoothPos(walk.route, walk.dist, t);
-      const s = walk.route.posAt(0), e = walk.route.posAt(walk.route.length);
-      const dir = e.clone().sub(s);
-      return { target: p, yaw: dir.lengthSq() > 100 ? Math.atan2(-dir.x, -dir.z) * 0.85 : 0.5, pitch: 0.95, dist: ride ? 110 : 190 };
+      return followCam(walk.route, walk.dist(t + 0.4));
     },
     overview: (() => {
       const s = (ride ? ride.route : walk.route).posAt(0);

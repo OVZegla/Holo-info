@@ -88,6 +88,8 @@ function buildStationWorld(id) {
   // itinéraires recalculés sur le réseau réel des rues (si données OSM)
   if (city.graph) rerouteOnOsm(plan, city);
   const labels = city.labels.map((l) => ({ text: l.text, at: l.at, h: l.h, cls: l.cls, maxDist: l.cls.includes('minor') ? 700 : 2600, y: groundY }));
+  // noms de rues OSM : visibles seulement près de la caméra
+  for (const s of plan.streetLabels || []) labels.push({ text: s.text, at: s.at, h: 1.2, cls: 'street', maxDist: 600, y: groundY, stem: false });
   return {
     id, kind: id === 'lille' ? 'terminus' : 'through', group: g, plan, city, station,
     occluders: [...station.occluders, ...city.occluders],

@@ -267,6 +267,8 @@ function lille() {
     ],
     reserve: [[-48, -900, 48, 22], [-12, 20, 12, 25], [-36, 20, -24, 35]],
     noBuild: [[-150, 20, 210, 72]], // jusqu'à x = 210 : entrée des véhicules sur le parvis
+    // emprise réelle de la gare et des quais (plus large que la maquette) : les itinéraires la contournent
+    noWalk: [[-75, -700, 75, 19]],
     pois: {
       'arret-bus': { at: [-50, 36.6], rot: 180, label: 'Arrêt de bus' },
       'depose-minute': { at: [42, 36.6], rot: 180, label: 'Dépose-minute' },

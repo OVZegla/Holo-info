@@ -56,7 +56,7 @@ function show(name) {
   document.body.dataset.screen = name;
 }
 
-const MODE_LABEL = { bus: 'Bus', voiture: 'Voiture', marche: 'À pied' };
+const MODE_LABEL = { bus: 'Bus', voiture: 'Voiture', marche: 'À pied', gare: 'Arrivée en gare' };
 const MODE_SUB = (l) => l.mode === 'bus' ? `Ligne ${l.ligne} · ${l.depart}` : l.mode === 'voiture' ? `Prise en charge · ${l.depart}` : `${Math.round(toMin(l.arrivee) - toMin(l.depart))} min de marche`;
 const legEnd = (l) => fmt(toMin(l.arrivee) + (l.marcheFinale || 0));
 const legLabel = (l) => (l.mode === 'bus'
@@ -64,7 +64,8 @@ const legLabel = (l) => (l.mode === 'bus'
   : MODE_LABEL[l.mode]);
 const CUSTOM_SUB = (l) => l.mode === 'bus'
   ? `${l.depart} · ${l.nomPoint.replace(/^Arrêt /, '')} → ${l.arretDescente} · arrivée ${legEnd(l)}`
-  : `${Math.round(toMin(l.arrivee) - toMin(l.depart))} min · arrivée ${legEnd(l)}`;
+  : l.mode === 'gare' ? `Sortie de la gare à ${legEnd(l)}`
+    : `${Math.round(toMin(l.arrivee) - toMin(l.depart))} min · arrivée ${legEnd(l)}`;
 
 function renderHome() {
   const panel = $('.home-panel');
@@ -78,7 +79,7 @@ function renderHome() {
     dest.correspondances.forEach((l, i) => {
       const b = document.createElement('button');
       b.className = 'choice mode' + (i === sel.legIdx ? ' selected' : '');
-      b.innerHTML = `<span class="mode-ico mi-${l.vehicule === 'Tram' ? 'tram' : l.mode}"></span><span><span class="c-title">${legLabel(l)}</span><br><span class="c-sub">${CUSTOM_SUB(l)}</span></span>`;
+      b.innerHTML = `<span class="mode-ico mi-${l.vehicule === 'Tram' ? 'tram' : l.mode === 'gare' ? 'marche' : l.mode}"></span><span><span class="c-title">${legLabel(l)}</span><br><span class="c-sub">${CUSTOM_SUB(l)}</span></span>`;
       b.onclick = () => { sel.legIdx = i; renderHome(); };
       ml.appendChild(b);
     });
@@ -142,7 +143,7 @@ function setHint(text, error = false) {
 
 function renderSuggestions() {
   const q = searchInput.value;
-  suggestions = q.trim().length >= 2 ? searchPlaces(q) : [];
+  suggestions = q.trim().length >= 2 ? searchPlaces(q, 4) : [];
   const box = $('#suggest');
   box.innerHTML = '';
   for (const s of suggestions) {
@@ -169,6 +170,7 @@ function choosePlace(place) {
   previewCity();
   const d = r.dest, l = d.correspondances[0];
   const how = l.mode === 'bus' ? `en ${(l.vehicule || 'bus').toLowerCase()}, ligne ${l.ligne}` : 'à pied';
+  if (d.stationOnly) { speak(`${place.name}. Train de ${d.train.depart}, arrivée à ${d.train.arrivee}.`); return; }
   speak(d.local
     ? `${place.name}. Le plus rapide : ${how}, arrivée à ${legEnd(l)}.`
     : `${place.name}, à ${place.cityName}. Train de ${d.train.depart}, puis ${how}. Arrivée à ${legEnd(l)}.`);
@@ -254,8 +256,8 @@ function renderSummary() {
       <li class="sum-item"><span class="pin"><i class="mi-train"></i></span><span class="time">${T.depart}</span>
         <div><div class="what">${T.numero} · ${T.direction}</div><div class="det">Quai <b>${T.quai}</b> · voiture <b>${T.voiture}</b><br>Arrêts : ${T.arrets.map((a) => `${a.gare} ${a.heure}`).join(' · ') || 'direct'}</div></div></li>
       <li class="sum-item"><span class="pin"><i class="mi-gare"></i></span><span class="time">${T.arrivee}</span>
-        <div><div class="what">${g[city.id].nomComplet}</div><div class="det">Arrivée quai <b>${T.quaiArrivee}</b> · ${trip.walkArr} min ${leg.mode === 'marche' ? 'jusqu’à la sortie' : 'jusqu’au point de correspondance'}, ${access(trip.usesStairsArr, trip.usesLiftArr)}</div></div></li>
-      <li class="sum-item"><span class="pin"><i class="mi-${leg.mode}"></i></span><span class="time">${leg.depart}</span><div>${legLine}</div></li>
+        <div><div class="what">${g[city.id].nomComplet}</div><div class="det">Arrivée quai <b>${T.quaiArrivee}</b> · ${trip.walkArr} min ${leg.mode === 'marche' || leg.mode === 'gare' ? 'jusqu’à la sortie' : 'jusqu’au point de correspondance'}, ${access(trip.usesStairsArr, trip.usesLiftArr)}</div></div></li>
+      ${leg.mode === 'gare' ? '' : `<li class="sum-item"><span class="pin"><i class="mi-${leg.mode}"></i></span><span class="time">${leg.depart}</span><div>${legLine}</div></li>`}
       <li class="sum-item"><span class="pin"><i class="mi-lieu"></i></span><span class="time">${trip.endStr}</span>
         <div><div class="what">${dest.nom}</div><div class="det">${dest.type}${leg.marcheFinale ? ` · ${leg.marcheFinale} min à pied depuis ${leg.mode === 'bus' ? 'l’arrêt' : 'le véhicule'}` : ''}</div></div></li>
     </ol>`;
@@ -309,7 +311,7 @@ async function enterStage(i, { snap = false } = {}) {
   // étiquettes
   player.labels = [];
   for (const l of world.labels) {
-    const it = engine.labels.add({ html: l.text, cls: l.cls, pos: new THREE.Vector3(l.at[0], (l.y || 0) + l.h, l.at[1]), maxDist: l.maxDist });
+    const it = engine.labels.add({ html: l.text, cls: l.cls, pos: new THREE.Vector3(l.at[0], (l.y || 0) + l.h, l.at[1]), maxDist: l.maxDist, stem: l.stem !== false });
     player.labels.push({ it, spec: {} });
   }
   for (const l of stage.labels) {
@@ -356,13 +358,15 @@ async function startJourney() {
   player.ctx = { data: DATA, city, dest, leg, stepFree: sel.stepFree };
   // destination dans la ville de la borne : sortie de gare puis trajet, sans train
   if (dest.local) { player.factories = [stageArrival, stageDestination]; player.worlds = [city.id, city.id]; }
+  // destination = la gare d'arrivée : le parcours s'arrête à la sortie de la gare
+  else if (dest.stationOnly) { player.factories = [stageDeparture, stageTrain, stageArrival]; player.worlds = ['bethune', 'region', city.id]; }
   else { player.factories = FACTORIES; player.worlds = ['bethune', 'region', city.id, city.id]; }
   releaseWorlds(['bethune', 'region', city.id]);
   player.overview = false;
   $('#ctl-overview').classList.remove('active');
   await fade(true);
   engine.rig.stiffness = 2.0;
-  engine.setViewShift(0.04);
+  engine.setViewShift(0.16); // commandes à mi-hauteur : la scène utile est dans la moitié haute
   player.worldId = null;
   show('journey');
   setPlaying(true);
@@ -375,6 +379,23 @@ function showEnd() {
   const { dest, leg, city } = player.ctx;
   $('#end-title').textContent = dest.nom;
   const legTxt = leg.mode === 'bus' ? `${(leg.vehicule || 'bus').toLowerCase()} ${leg.ligne}` : leg.mode === 'voiture' ? 'voiture' : 'à pied';
+  if (dest.stationOnly) {
+    speak(`Vous êtes arrivé : ${dest.nom}.`);
+    $('#end-body').innerHTML = `
+    <div class="sum-facts">
+      <div class="fact"><div class="k">Arrivée</div><div class="v">${legEnd(leg)}</div></div>
+      <div class="fact"><div class="k">Durée</div><div class="v">${fmtDur(toMin(legEnd(leg)) - toMin(DATA.borne.heure))}</div></div>
+      <div class="fact"><div class="k">Train</div><div class="v" style="font-size:calc(var(--u)*2.6)">${dest.train.depart} <small>quai ${dest.train.quai}</small></div></div>
+    </div>
+    <p class="det" style="font-size:calc(var(--u)*2.5);color:var(--text-2);margin:0 0 calc(var(--u)*3);line-height:1.4">
+      ${DATA.gares.bethune.nom} → ${dest.nom} en ${dest.train.numero}.</p>`;
+    $('#end-title').textContent = dest.nom;
+    lastInput = performance.now();
+    $('#screen-end').classList.add('active');
+    document.body.dataset.screen = 'end';
+    screen = 'end';
+    return;
+  }
   speak(`Vous êtes arrivé : ${dest.nom}.`);
   if (dest.local) {
     const end = legEnd(leg);
@@ -488,7 +509,7 @@ function goHome() {
   engine.clearWorld();
   engine.world.add(w.group);
   engine.occluders = w.occEntries;
-  for (const l of w.labels) engine.labels.add({ html: l.text, cls: l.cls, pos: new THREE.Vector3(l.at[0], (l.y || 0) + l.h, l.at[1]), maxDist: 4000 });
+  for (const l of w.labels) if (l.cls !== 'street') engine.labels.add({ html: l.text, cls: l.cls, pos: new THREE.Vector3(l.at[0], (l.y || 0) + l.h, l.at[1]), maxDist: 4000 });
   $('#clock').textContent = DATA.borne.heure;
   $('#brand-sub').textContent = DATA.gares[DATA.borne.gare].nomComplet;
   lastClock = '';

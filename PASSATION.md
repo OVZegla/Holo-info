@@ -38,7 +38,13 @@
   s'il fait gagner 3 min). Destination à Béthune : pas de train, sortie de gare puis trajet.
   Marches calculées sur les rues et cheminements piétons OSM (footway, path, steps).
 - Consignes lues à voix haute (voix française de Windows, hors ligne), bouton « Voix » dans le guidage.
-- Béthune agrandi (rayon 1 180 m) pour inclure la Grand-Place.
+- Béthune agrandi (rayon 1 180 m) pour inclure la Grand-Place ; Lens aussi (stade Bollaert).
+- Choix « gare » (la gare, ou un lieu nommé « gare » à moins de 250 m) : le trajet s'arrête à la sortie de la gare.
+- Itinéraires : emprise réelle de Lille-Flandres et de ses quais interdite (`noWalk`), les marches la contournent ;
+  pour un bâtiment, on vise son côté le plus proche de la gare.
+- Rendu : noms de rues OSM (visibles près de la caméra), train sans arrêt aux gares intermédiaires,
+  marches à vitesse constante (10 m/s à l'écran, 40 s max), caméra de suivi « trois-quarts arrière ».
+- Borne à taille humaine : panneaux réduits et à mi-hauteur, commandes du guidage à 30 % du bas.
 
 ## Reste à faire
 1. Contrôle visuel complet avec `npm run shots` (Playwright requis).

@@ -18,6 +18,7 @@ export const GTFS = FILES['../data/gtfs.json'] || null;
 export const hasGtfs = () => !!GTFS;
 
 export const ORIGIN = 'bethune';
+const STATION_FULL = { bethune: 'Gare de Béthune', lens: 'Gare de Lens', arras: 'Gare d’Arras', lille: 'Gare Lille-Flandres' };
 const WALK = 72;            // m/min (≈ 4,3 km/h, rythme tranquille)
 const EXIT = [0, 24];       // sortie de gare sur le parvis (repère local de la maquette)
 const DEP_WALK = 6;         // hall → quai à Béthune (min, marge comprise)
@@ -128,10 +129,18 @@ export function planTo(place, nowStr) {
   if (!GTFS) return { error: 'Horaires indisponibles : lancer npm run gtfs.' };
   const now = toMin(nowStr);
   const plan = planOf(place.city);
-  // monuments de la maquette : position déjà dans le repère local
-  const P = place.xz || plan.osmFrame.toLocal(place.en);
+  // monuments de la maquette : position déjà dans le repère local ;
+  // bâtiment : on vise son côté le plus proche de la gare (accès), pas son centre
+  let P = place.xz || plan.osmFrame.toLocal(place.en);
+  if (place.poly?.length) {
+    const d = (q) => Math.hypot(q[0] - EXIT[0], q[1] - EXIT[1]);
+    P = place.poly.map(plan.osmFrame.toLocal).reduce((a, q) => (d(q) < d(a) ? q : a));
+  }
   if (Math.max(Math.abs(P[0]), Math.abs(P[1])) > plan.radius - 20) return { error: `${place.name} est en dehors du plan de ${place.cityName}.` };
   const local = place.city === ORIGIN;
+  // la gare elle-même, ou tout lieu « gare » à côté d'elle (bâtiment, arrêt « Gare Quai B »…) : arrêt à la gare
+  const stationOnly = place.kind === 'station' || (/\bgare\b/i.test(place.name) && Math.hypot(P[0] - EXIT[0], P[1] - EXIT[1]) < 250);
+  if (stationOnly && local) return { error: 'Vous êtes déjà à la gare de Béthune.' };
   let train = null, t0;
   if (local) t0 = now + LOCAL_EXIT;
   else {
@@ -144,11 +153,14 @@ export function planTo(place, nowStr) {
     };
     t0 = toMin(T.arr) + ARR_WALK;
   }
-  const correspondances = localOptions(place.city, P, t0);
+  // gare d'arrivée elle-même : le trajet se termine à la sortie de la gare
+  const correspondances = stationOnly
+    ? [{ mode: 'gare', nomPoint: 'Sortie de la gare', depart: train.arrivee, arrivee: fmt(t0), marcheFinale: 0, _geo: {} }]
+    : localOptions(place.city, P, t0);
   return {
     local,
     dest: {
-      id: 'custom', custom: true, local, nom: place.name, type: `${place.kindLabel} · ${place.cityName}`,
+      id: 'custom', custom: true, local, stationOnly, nom: stationOnly ? STATION_FULL[place.city] : place.name, type: `${place.kindLabel} · ${place.cityName}`,
       lieu: 'custom', at: P, train, correspondances,
     },
   };
@@ -178,7 +190,7 @@ export function injectCustom(world, dest, leg) {
     world.routes['bus:custom'] = g.ride;
     world.routes['bus:arrivee'] = g.approach || [[g.board[0] + 120, g.board[1]], g.board];
     world.walks['custom:bus'] = g.fromStop;
-  } else {
+  } else if (g.walk) {
     world.walks['custom:marche'] = g.walk;
   }
 }

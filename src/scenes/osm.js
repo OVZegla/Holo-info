@@ -281,9 +281,10 @@ export function applyOsm(plan) {
 
   // rues : rues « maquette » (parvis) + réseau réel hors gare
   const roads = [];
+  const noRoute = [...excl, ...(plan.noWalk || [])]; // quais et halls de gare : pas de passage au travers
   for (const r of osm.roads) {
     const pts = r.p.map(T);
-    for (const part of splitOutside(pts, excl)) if (!part.every(out)) roads.push({ pts: part, k: r.k, n: r.n });
+    for (const part of splitOutside(pts, noRoute)) if (!part.every(out)) roads.push({ pts: part, k: r.k, n: r.n });
   }
   const modelStreets = (plan.streets || []).filter((s) => s.model);
   plan.streets = [
@@ -291,6 +292,38 @@ export function applyOsm(plan) {
     // trottoirs, passages et escaliers : utilisés pour les marches, pas dessinés (ils doubleraient les rues)
     ...roads.filter((r) => !FOOT.has(r.k)).map((r) => ({ pts: r.pts, w: ROAD_WIDTH[r.k] || 6, noBuild: true, trees: r.k === 'primary' || r.k === 'secondary' ? 'sparse' : false })),
   ];
+  // noms de rues : au milieu du plus long tronçon, + un rappel tous les 300 m sur les longues rues
+  const byName = new Map();
+  for (const r of roads) {
+    if (!r.n || FOOT.has(r.k) || r.k === 'service') continue;
+    const len = r.pts.reduce((s, q, i) => (i ? s + Math.hypot(q[0] - r.pts[i - 1][0], q[1] - r.pts[i - 1][1]) : 0), 0);
+    const g = byName.get(r.n) || { total: 0, parts: [] };
+    g.total += len; g.parts.push({ pts: r.pts, len });
+    byName.set(r.n, g);
+  }
+  plan.streetLabels = [];
+  const pointAt = (pts, d) => {
+    for (let i = 1; i < pts.length; i++) {
+      const s = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      if (d <= s) return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * (d / s), pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * (d / s)];
+      d -= s;
+    }
+    return pts[pts.length - 1];
+  };
+  for (const [n, g] of byName) {
+    if (g.total < 60) continue;
+    for (const part of g.parts.sort((a, b) => b.len - a.len)) {
+      if (part.len < 50) break;
+      const k = Math.max(1, Math.floor(part.len / 300));
+      for (let i = 0; i < k; i++) {
+        const at = pointAt(part.pts, (part.len * (i + 0.5)) / k);
+        const dup = plan.streetLabels.some((l) => l.text === n && Math.hypot(l.at[0] - at[0], l.at[1] - at[1]) < 150);
+        if (!dup && !out(at) && !inRects(at, excl)) plan.streetLabels.push({ text: n, at });
+      }
+      if (g.parts.length > 1 && part.len < 150) break;
+    }
+  }
+
   plan.rails = [];
   for (const r of osm.rails) for (const part of splitOutside(r.p.map(T), plan.reserve || [])) plan.rails.push({ pts: part, tracks: 1, single: true });
 

@@ -9,7 +9,8 @@ import { GTFS, planOf } from './planner.js';
 const CITY_WORDS = { bethune: ['bethune'], lens: ['lens'], arras: ['arras'], lille: ['lille'] };
 const CITY_NAME = { bethune: 'Béthune', lens: 'Lens', arras: 'Arras', lille: 'Lille' };
 const STOP = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'l', 'd', 'a', 'au', 'aux', 'en', 'et', 'sur', 'pres', 'vers', 'je', 'veux', 'aller', 'voudrais', 'vais', 'me', 'rendre', 'pour']);
-const KIND_LABEL = { road: 'Rue', square: 'Place', park: 'Parc', building: 'Lieu', stop: 'Arrêt', landmark: 'Monument' };
+const KIND_LABEL = { road: 'Rue', square: 'Place', park: 'Parc', building: 'Lieu', stop: 'Arrêt', landmark: 'Monument', station: 'Gare SNCF' };
+const STATION_NAME = { bethune: 'Gare de Béthune', lens: 'Gare de Lens', arras: 'Gare d’Arras', lille: 'Gare Lille-Flandres' };
 // mots-clés supplémentaires des monuments de la maquette
 // noms d'usage des lieux OSM (clé : nom OSM normalisé)
 const NAME_ALIAS = { 'place du general de gaulle': 'grand place','place des heros': 'petite place' };
@@ -46,8 +47,10 @@ function build() {
       const en = centroid(g.pts);
       if (!inPlan(plan.osmFrame.toLocal(en))) continue; // hors du décor 3D : non proposé
       const extra = NAME_ALIAS[norm(g.name)] || '';
-      out.push({ city, name: g.name, kind: g.kind, prio: g.prio + (extra ? 3 : 0), en, toks: tokens(`${g.name} ${extra}`), dist: Math.hypot(en[0], en[1]) });
+      out.push({ city, name: g.name, kind: g.kind, prio: g.prio + (extra ? 3 : 0), en, poly: g.kind === 'building' ? g.pts : null, toks: tokens(`${g.name} ${extra}`), dist: Math.hypot(en[0], en[1]) });
     }
+    // la gare elle-même (« gare d'arras ») : le trajet s'arrête à la sortie de la gare
+    out.push({ city, name: STATION_NAME[city], kind: 'station', prio: 8, xz: [0, 24], en: [0, 0], toks: tokens(`${STATION_NAME[city]} gare sncf station`), dist: 0 });
     // monuments modélisés (Opéra, stade Bollaert…) : certains n'ont pas de nom dans OSM
     for (const lm of plan.landmarks || []) {
       if (!lm.label || lm.at.some(Number.isNaN) || !inPlan(lm.at)) continue;
@@ -93,7 +96,14 @@ export function searchPlaces(q, limit = 6) {
   }
   scored.sort((a, b) => b.score - a.score);
   // pas deux fois le même nom dans la même ville (bâtiment + rue « Euralille »)
-  const seen = new Set();
-  return scored.filter((e) => { const k = e.city + norm(e.name); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, limit)
-    .map((e) => ({ city: e.city, cityName: CITY_NAME[e.city], name: e.name, kind: e.kind, kindLabel: KIND_LABEL[e.kind], en: e.en, xz: e.xz }));
+  // (le résultat gardé récupère le contour du bâtiment homonyme : on vise son accès, pas son centre)
+  const seen = new Map();
+  return scored.filter((e) => {
+    const k = e.city + norm(e.name);
+    const kept = seen.get(k);
+    if (kept) { if (!kept.poly && e.poly) kept.poly = e.poly; return false; }
+    seen.set(k, e);
+    return true;
+  }).slice(0, limit)
+    .map((e) => ({ city: e.city, cityName: CITY_NAME[e.city], name: e.name, kind: e.kind, kindLabel: KIND_LABEL[e.kind], en: e.en, xz: e.xz, poly: e.poly }));
 }
