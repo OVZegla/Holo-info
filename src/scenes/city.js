@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { palette } from '../core/materials.js';
-import { mesh, rectsMinus, block } from '../core/build.js';
+import { mesh, rectsMinus, block, shapeFromXZ, extrudeShapeGeo } from '../core/build.js';
 import { LANDMARKS } from './landmarks.js';
 
 /*
@@ -210,8 +210,9 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
   for (const r of plan.rails || []) {
     const pts = r.pts.map(T);
     const n = r.tracks || 2;
-    bedGeos.push(...ribbonGeo(pts, n * 4.5 + 2, y + 0.03));
-    for (let i = 0; i < pts.length - 1; i++) grid.fillSegment(pts[i], pts[i + 1], (n * 4.5 + 2) / 2 + 1, 2);
+    const bw = r.single ? 4 : n * 4.5 + 2;
+    bedGeos.push(...ribbonGeo(pts, bw, y + 0.03));
+    for (let i = 0; i < pts.length - 1; i++) grid.fillSegment(pts[i], pts[i + 1], bw / 2 + 1, 2);
     for (let k = 0; k < n; k++) {
       const off = (k - (n - 1) / 2) * 4.5;
       for (const d of [-0.75, 0.75]) railGeos.push(...ribbonGeo(offsetLine(pts, off + d), 0.14, y + 0.08).filter((q) => q.type === 'PlaneGeometry'));
@@ -274,7 +275,7 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
       const [ax, az] = s.pts[i], [bx, bz] = s.pts[i + 1];
       const len = Math.hypot(bx - ax, bz - az);
       const nx = -(bz - az) / len, nz = (bx - ax) / len;
-      for (let d = 6; d < len - 6; d += 11) {
+      for (let d = 6; d < len - 6; d += s.trees === 'sparse' ? 24 : 11) {
         for (const side of [-1, 1]) {
           const px = ax + ((bx - ax) * d) / len + nx * side * (s.w / 2 - 1.2);
           const pz = az + ((bz - az) * d) / len + nz * side * (s.w / 2 - 1.2);
@@ -327,6 +328,30 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
       }
     }
   }
+  /* ---- bâti réel (OpenStreetMap) ---- */
+  if (plan.osmBuildings) {
+    const hmin = hc.min ?? 7, hmax = hc.max ?? 14;
+    for (const b of plan.osmBuildings) {
+      const poly = b.poly;
+      if (poly.some(([px, pz]) => Math.abs(px) > R - 4 || Math.abs(pz) > R - 4)) continue;
+      const [cx, cz] = centroid(poly);
+      if (grid.get(cx, cz) >= 2 || poly.filter(([px, pz]) => grid.get(px, pz) >= 2).length > poly.length * 0.3) continue;
+      const area = polyArea(poly);
+      if (area < 10) continue;
+      let h = b.h || hmin + rand() * (hmax - hmin) * (area > 400 ? 1 : 0.75);
+      h = Math.min(130, Math.max(3, h));
+      const obb = minRect(poly);
+      try {
+        if (obb && area < 200 && area / obb.area > 0.85 && h < 14 && rand() < (hc.gable ?? 0.3)) {
+          (rand() < 0.62 ? facGeosA : facGeosB).push(...buildingGeo(obb.cx, obb.cz, obb.ux, obb.uz, obb.hw, obb.hd, h, y, 'gable'));
+        } else {
+          (rand() < 0.62 ? facGeosA : facGeosB).push(extrudeShapeGeo(shapeFromXZ(poly), y, y + h));
+        }
+        count++;
+      } catch { /* polygone dégénéré */ }
+    }
+  }
+
   const occ = [];
   if (facGeosA.length) g.add(mesh(mergeGeometries(facGeosA), 'facade', { edgeAngle: 35, edgeOpacity: 0.75 }));
   if (facGeosB.length) g.add(mesh(mergeGeometries(facGeosB), 'facade2', { edgeAngle: 35, edgeOpacity: 0.75 }));
@@ -346,7 +371,7 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
     treesAt.length = 0;
   }
 
-  return { group: g, frame, T, labels, pois, landmarks: landmarkObjs, occluders: occ, buildings: count, streets };
+  return { group: g, frame, T, labels, pois, landmarks: landmarkObjs, occluders: occ, buildings: count, streets, graph: plan.graph || null, groundY: y };
 }
 
 const treesAt = [];
@@ -403,4 +428,27 @@ function bbox(poly) {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   for (const [x, z] of poly) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
   return [x0, z0, x1, z1];
+}
+
+function polyArea(p) { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] + p[i][0]) * (p[j][1] - p[i][1]); return Math.abs(a / 2); }
+
+/** Rectangle orienté d'aire minimale (pour poser un toit à deux pans). */
+function minRect(poly) {
+  let best = null;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (l < 0.5) continue;
+    const ux = (b[0] - a[0]) / l, uz = (b[1] - a[1]) / l, nx = -uz, nz = ux;
+    let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+    for (const [x, z] of poly) { const u = x * ux + z * uz, v = x * nx + z * nz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+    const area = (u1 - u0) * (v1 - v0);
+    if (!best || area < best.area) {
+      const uc = (u0 + u1) / 2, vc = (v0 + v1) / 2;
+      const long = u1 - u0 >= v1 - v0;
+      best = { area, cx: ux * uc + nx * vc, cz: uz * uc + nz * vc,
+        ux: long ? ux : nx, uz: long ? uz : nz, hw: (long ? u1 - u0 : v1 - v0) / 2, hd: (long ? v1 - v0 : u1 - u0) / 2 };
+    }
+  }
+  return best;
 }

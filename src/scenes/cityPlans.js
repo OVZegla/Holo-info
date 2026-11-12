@@ -61,15 +61,17 @@ function bethune() {
   const beff = geo([-40, 780]);
   const stationZone = [-95, -30, 95, 26];
   return {
-    id: 'bethune', radius: 900, seed: 11, local: true,
+    id: 'bethune', radius: 900, seed: 11, local: true, facadeBearing: 10, modelZone: [-160, -45, 160, 62],
     heights: { min: 7, max: 15, center: beff, falloff: 900, gable: 0.55, wMin: 6, wMax: 13, dMin: 9, dMax: 14 },
     areas: [
-      { poly: rect(0, 32, 1, 0, 120, 22), kind: 'square' },
+      { poly: rect(0, 32, 1, 0, 120, 22), kind: 'square', model: true },
       { poly: rect(beff[0], beff[1], 0.985, -0.174, 150, 95), kind: 'square', label: 'Grand’Place' },
       { poly: rect(-260, 380, 1, 0.3, 160, 110), kind: 'park' },
     ],
     streets: [
-      { pts: [[-700, 48], [700, 48]], w: 16, trees: true },
+      { pts: [[-150, 48], [150, 48]], w: 16, trees: true, model: true },
+      { pts: [[-700, 48], [-150, 48]], w: 16, trees: true },
+      { pts: [[150, 48], [700, 48]], w: 16, trees: true },
       { pts: [[0, 48], [30, 260], [110, 520], [beff[0] - 20, beff[1] - 60]], w: 16, trees: true, label: 'Vers le centre-ville' },
       { pts: [[-180, 48], [-200, 300], [-160, 640]], w: 12 },
       { pts: [[220, 48], [240, 300], [300, 640]], w: 12 },
@@ -79,8 +81,8 @@ function bethune() {
     ],
     rails: [],
     landmarks: [
-      { type: 'beffroiBethune', at: beff, rot: 10, label: 'Beffroi de Béthune', id: 'beffroi' },
-      { type: 'placeArras', at: beff, rot: 10 + 90, params: { w: 150, d: 95, seed: 21, skipSides: [] }, id: 'grandplace' },
+      { type: 'beffroiBethune', at: beff, rot: 10, label: 'Beffroi de Béthune', id: 'beffroi', osm: 'beffroi' },
+      { type: 'placeArras', at: beff, rot: 10 + 90, params: { w: 150, d: 95, seed: 21, skipSides: [] }, id: 'grandplace', anchor: 'beffroi' },
     ],
     reserve: [stationZone],
     pois: {},
@@ -96,16 +98,18 @@ function lens() {
   const stade = geo([-880, 420]);
   const pavillon = [stade[0] + 110, stade[1] + 120];
   return {
-    id: 'lens', radius: 950, seed: 23, local: true,
+    id: 'lens', radius: 950, seed: 23, local: true, facadeBearing: 160, modelZone: [-160, -45, 160, 62],
     heights: { min: 6, max: 14, center: [60, 380], falloff: 800, gable: 0.7, wMin: 6, wMax: 12, dMin: 8, dMax: 13 },
     areas: [
-      { poly: rect(-10, 33, 1, 0, 120, 26), kind: 'square' },
+      { poly: rect(-10, 33, 1, 0, 120, 26), kind: 'square', model: true },
       { poly: rect(stade[0], stade[1], 1, 0.35, 230, 190), kind: 'square' },
       { poly: rect(250, 300, 1, 0.1, 140, 90), kind: 'park' },
       { poly: rect(stade[0] + 260, stade[1] - 40, 0.4, 1, 240, 120), kind: 'park' },
     ],
     streets: [
-      { pts: [[-950, 48], [950, 48]], w: 16, trees: true },
+      { pts: [[-150, 48], [150, 48]], w: 16, trees: true, model: true },
+      { pts: [[-950, 48], [-150, 48]], w: 16, trees: true },
+      { pts: [[150, 48], [950, 48]], w: 16, trees: true },
       { pts: [[-10, 48], [10, 220], [60, 420], [90, 700]], w: 16, trees: true },
       { pts: [[-300, 48], [-335, -60], [-420, -250], [-560, -470], [stade[0] + 70, stade[1] + 160], [stade[0] - 60, stade[1] + 260]], w: 15, trees: true },
       { pts: [[-900, -60], [500, -60]], w: 12 },
@@ -114,14 +118,14 @@ function lens() {
       ...grid({ x0: -900, x1: 600, z0: -880, z1: -140, step: 110, stepZ: 70, angle: 20, w: 8, skip: insideRect([stade[0] - 160, stade[1] - 140, stade[0] + 160, stade[1] + 140]) }),
     ],
     landmarks: [
-      { type: 'stadeBollaert', at: stade, rot: 20, label: 'Stade Bollaert-Delelis', id: 'stade' },
-      { type: 'pavillon', at: pavillon, rot: 200, params: { w: 34, d: 24, h: 10, name: 'Pavillon des Rencontres' }, id: 'bollaert-dest' },
+      { type: 'stadeBollaert', at: stade, rot: 20, label: 'Stade Bollaert-Delelis', id: 'stade', osm: 'bollaert' },
+      { type: 'pavillon', at: pavillon, rot: 200, params: { w: 34, d: 24, h: 10, name: 'Pavillon des Rencontres' }, id: 'bollaert-dest', anchor: 'stade' },
     ],
     reserve: [[-95, -30, 95, 26]],
     pois: {
       'arret-bus': { at: [-38, 37.5], rot: 180, label: 'Arrêt de bus' },
       'depose-minute': { at: [34, 37.5], rot: 180, label: 'Dépose-minute' },
-      bollaert: { at: [pavillon[0] - 10, pavillon[1] - 20], building: 'bollaert-dest', label: 'Pavillon des Rencontres' },
+      bollaert: { at: [pavillon[0] - 10, pavillon[1] - 20], building: 'bollaert-dest', anchor: 'stade', label: 'Pavillon des Rencontres' },
     },
     routes: {
       // circulation à droite : les véhicules vers -x roulent côté gare (z ≈ 44)
@@ -152,10 +156,10 @@ function arras() {
   const cath = [-200, 590];
   const dest = [heros[0] - vNS[0] * 22 + uEW[0] * 18, heros[1] - vNS[1] * 22 + uEW[1] * 18];
   return {
-    id: 'arras', radius: 820, seed: 31, local: true,
+    id: 'arras', radius: 820, seed: 31, local: true, facadeBearing: 290, modelZone: [-160, -45, 160, 62],
     heights: { min: 8, max: 16, center: heros, falloff: 700, gable: 0.5, wMin: 6, wMax: 13, dMin: 10, dMax: 15 },
     areas: [
-      { poly: rect(0, 70, 1, 0, 150, 90), kind: 'square', label: 'Place du Maréchal-Foch' },
+      { poly: rect(0, 70, 1, 0, 150, 90), kind: 'square', label: 'Place du Maréchal-Foch', model: true },
       { poly: rect(heros[0], heros[1], uEW[0], uEW[1], 112, 64), kind: 'square', label: 'Place des Héros' },
       { poly: rect(grand[0], grand[1], uEW[0], uEW[1], 190, 118), kind: 'square', label: 'Grand’Place' },
       { poly: rect(120, 320, 1, 0.2, 180, 120), kind: 'park' },
@@ -163,23 +167,24 @@ function arras() {
     streets: [
       { pts: [[-800, 122], [800, 122]], w: 14, trees: true },
       { pts: [[-60, 120], [-150, 250], [-280, 370], [-372, 432]], w: 13, trees: true, label: 'Rue Gambetta' },
-      { pts: [[-80, 24], [-80, 122]], w: 12 },
-      { pts: [[80, 24], [80, 122]], w: 12 },
+      { pts: [[-80, 24], [-80, 122]], w: 12, model: true },
+      { pts: [[80, 24], [80, 122]], w: 12, model: true },
+      { pts: [[-150, 122], [150, 122]], w: 14, model: true },
       { pts: [[heros[0] + vNS[0] * 45, heros[1] + vNS[1] * 45], [grand[0] - vNS[0] * 70, grand[1] - vNS[1] * 70]], w: 10, label: 'Rue de la Taillerie' },
       { pts: [[-372, 432], [cath[0] - 20, cath[1] - 80]], w: 11 },
       ...grid({ x0: -760, x1: 600, z0: 160, z1: 800, step: 85, stepZ: 75, angle: 22, w: 9, skip: (seg) => [heros, grand, cath].some((c) => segNear(seg, c, c === grand ? 115 : 75)) }),
       ...grid({ x0: -700, x1: 700, z0: -760, z1: -120, step: 120, stepZ: 90, angle: -3, w: 9 }),
     ],
     landmarks: [
-      { type: 'beffroiArras', at: beff, rot: 110 + 90, label: 'Beffroi d’Arras', id: 'beffroi' },
-      { type: 'hotelDeVilleArras', at: [beff[0] + 0.94 * -2 + 0.342 * 8, beff[1] + 0.94 * 8], rot: 110 + 90 },
-      { type: 'placeArras', at: heros, rot: 110, params: { w: 112, d: 64, seed: 7, skipSides: ['w'] }, id: 'heros' },
-      { type: 'placeArras', at: grand, rot: 110, params: { w: 190, d: 118, seed: 13 } },
-      { type: 'cathedraleArras', at: cath, rot: 110 - 90, label: 'Cathédrale', id: 'cathedrale' },
+      { type: 'beffroiArras', at: beff, rot: 110 + 90, label: 'Beffroi d’Arras', id: 'beffroi', osm: 'beffroi' },
+      { type: 'hotelDeVilleArras', at: [beff[0] + 0.94 * -2 + 0.342 * 8, beff[1] + 0.94 * 8], rot: 110 + 90, anchor: 'beffroi' },
+      { type: 'placeArras', at: heros, rot: 110, params: { w: 112, d: 64, seed: 7, skipSides: ['w'] }, id: 'heros', osm: 'h[ée]ros' },
+      { type: 'placeArras', at: grand, rot: 110, params: { w: 190, d: 118, seed: 13 }, id: 'grand', osm: '^grand.?place' },
+      { type: 'cathedraleArras', at: cath, rot: 110 - 90, label: 'Cathédrale', id: 'cathedrale', osm: 'cath[ée]drale' },
     ],
     reserve: [[-95, -30, 95, 26]],
     pois: {
-      heros: { at: dest, label: 'Atelier des Arcades', highlightRow: true },
+      heros: { at: dest, label: 'Atelier des Arcades', highlightRow: true, anchor: 'heros' },
     },
     routes: {},
     walks: {
@@ -219,17 +224,17 @@ function lille() {
   const lgvDir = [0.743, -0.669];
   const GY = -1.2;
   return {
-    id: 'lille', radius: 760, seed: 41, local: true, groundY: GY,
+    id: 'lille', radius: 760, seed: 41, local: true, groundY: GY, facadeBearing: 297, kind: 'terminus', osmNodeZ: 10, modelZone: [-130, 18, 160, 62],
     heights: { min: 12, max: 24, center: [80, 420], falloff: 900, gable: 0.05, mansard: 0.5, wMin: 8, wMax: 18, dMin: 11, dMax: 17 },
     areas: [
-      { poly: rect(0, 32, 1, 0, 140, 26), kind: 'square', label: 'Place de la Gare' },
+      { poly: rect(0, 32, 1, 0, 140, 26), kind: 'square', label: 'Place de la Gare', model: true },
       { poly: rect(theatre[0], theatre[1], 1, 0.1, 90, 56), kind: 'square', label: 'Place du Théâtre' },
       { poly: rect(grandPlace[0], grandPlace[1], 1, -0.2, 120, 84), kind: 'square', label: 'Grand’Place' },
       { poly: rect(matisse[0], matisse[1], 0.5, 1, 300, 200), kind: 'park', label: 'Parc Henri-Matisse' },
       { poly: rect(-400, -40, 1, 0.3, 90, 60), kind: 'park' },
     ],
     streets: [
-      { pts: [[-110, 44], [140, 44]], w: 16, trees: false },
+      { pts: [[-110, 44], [140, 44]], w: 16, trees: false, model: true },
       { pts: [[0, 52], [0, 372]], w: 18, trees: true, label: 'Rue Faidherbe' },
       { pts: [[-110, 44], [-160, -30], [-250, -100], [-420, -150]], w: 20, trees: true, label: 'Avenue Le Corbusier' },
       { pts: [[-420, -150], [-520, -205], [-600, -262], [-690, -330]], w: 18, trees: true, label: 'Boulevard de Turin' },
@@ -246,16 +251,16 @@ function lille() {
       { pts: [[europe[0] - lgvDir[0] * 330, europe[1] - lgvDir[1] * 330], [europe[0] + lgvDir[0] * 280, europe[1] + lgvDir[1] * 280]], tracks: 4 },
     ],
     landmarks: [
-      { type: 'operaLille', at: [opera[0], opera[1] + 30], rot: 180, label: 'Opéra', id: 'opera' },
-      { type: 'beffroiCCI', at: [cci[0] + 10, cci[1] + 40], rot: 270, label: 'Beffroi de la Chambre de commerce', id: 'cci' },
-      { type: 'vieilleBourse', at: bourse, rot: 180, label: 'Vieille Bourse', id: 'bourse' },
-      { type: 'colonneDeesse', at: grandPlace, rot: 0 },
-      { type: 'beffroiLille', at: hdv, rot: 297 - 180 - 90, label: 'Beffroi de l’Hôtel de Ville', id: 'hdv' },
-      { type: 'saintMaurice', at: stMaurice, rot: 270, label: 'Église Saint-Maurice', id: 'stmaurice' },
-      { type: 'lilleEurope', at: europe, rot: Math.atan2(lgvDir[0], lgvDir[1]) * 180 / Math.PI, label: 'Gare Lille-Europe', id: 'europe' },
-      { type: 'tourDeLille', at: [skiboot[0] + 40, skiboot[1] - 30], rot: 40, label: 'Tour de Lille', id: 'skiboot' },
-      { type: 'tourLilleurope', at: [lilleurope[0] + 30, lilleurope[1] + 40], rot: 30, label: 'Tour Lilleurope', id: 'lilleurope' },
-      { type: 'euralille', at: [euralilleC[0] - 20, euralilleC[1] - 40], rot: 60, label: 'Euralille', id: 'euralille' },
+      { type: 'operaLille', at: [opera[0], opera[1] + 30], rot: 180, label: 'Opéra', id: 'opera', osm: 'op[ée]ra' },
+      { type: 'beffroiCCI', at: [cci[0] + 10, cci[1] + 40], rot: 270, label: 'Beffroi de la Chambre de commerce', id: 'cci', osm: 'chambre de commerce|nouvelle bourse' },
+      { type: 'vieilleBourse', at: bourse, rot: 180, label: 'Vieille Bourse', id: 'bourse', osm: 'vieille bourse' },
+      { type: 'colonneDeesse', at: grandPlace, rot: 0, id: 'deesse', osm: 'grand.?place|charles de gaulle' },
+      { type: 'beffroiLille', at: hdv, rot: 297 - 180 - 90, label: 'Beffroi de l’Hôtel de Ville', id: 'hdv', osm: 'h[ôo]tel de ville' },
+      { type: 'saintMaurice', at: stMaurice, rot: 270, label: 'Église Saint-Maurice', id: 'stmaurice', osm: 'saint-maurice' },
+      { type: 'lilleEurope', at: europe, rot: Math.atan2(lgvDir[0], lgvDir[1]) * 180 / Math.PI, label: 'Gare Lille-Europe', id: 'europe', osm: 'lille[- ]europe' },
+      { type: 'tourDeLille', at: [skiboot[0] + 40, skiboot[1] - 30], rot: 40, label: 'Tour de Lille', id: 'skiboot', osm: 'tour de lille|lyonnais' },
+      { type: 'tourLilleurope', at: [lilleurope[0] + 30, lilleurope[1] + 40], rot: 30, label: 'Tour Lilleurope', id: 'lilleurope', osm: 'lilleurope' },
+      { type: 'euralille', at: [euralilleC[0] - 20, euralilleC[1] - 40], rot: 60, label: 'Euralille', id: 'euralille', osm: '^euralille' },
       { type: 'espaceHorizon', at: horizon, rot: 55, id: 'horizon-bldg' },
     ],
     reserve: [[-48, -900, 48, 22], [-12, 20, 12, 25], [-36, 20, -24, 35]],
@@ -264,7 +269,7 @@ function lille() {
       'arret-bus': { at: [-50, 36.6], rot: 180, label: 'Arrêt de bus' },
       'depose-minute': { at: [42, 36.6], rot: 180, label: 'Dépose-minute' },
       horizon: { at: [horizon[0] + 30, horizon[1] + 38], building: 'horizon-bldg', label: 'Espace Horizon' },
-      theatre: { at: [theatre[0] + 28, theatre[1] + 6], label: 'Maison des Beffrois' },
+      theatre: { at: [theatre[0] + 28, theatre[1] + 6], label: 'Maison des Beffrois', anchor: 'opera' },
     },
     routes: {
       'bus:arrivee': [[180, 40], [-50, 40]],

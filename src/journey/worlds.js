@@ -3,6 +3,7 @@ import { buildThroughStation, throughReserve, L } from '../scenes/station.js';
 import { buildLilleStation, LF } from '../scenes/stationLille.js';
 import { buildCity } from '../scenes/city.js';
 import { CITY_PLANS } from '../scenes/cityPlans.js';
+import { applyOsm } from '../scenes/osm.js';
 import { buildRegion } from '../scenes/region.js';
 import { facadeBethune, facadeLens, facadeArras, abribus, poteauDepose } from '../scenes/landmarks.js';
 
@@ -48,7 +49,7 @@ function buildRegionWorld() {
 }
 
 function buildStationWorld(id) {
-  const plan = CITY_PLANS[id]();
+  const plan = applyOsm(CITY_PLANS[id]());
   const g = new THREE.Group();
   g.name = 'world-' + id;
   let station, reserve = [];
@@ -84,6 +85,8 @@ function buildStationWorld(id) {
     p.x = lm.x + Math.sin(r) * d;
     p.z = lm.z + Math.cos(r) * d;
   }
+  // itinéraires recalculés sur le réseau réel des rues (si données OSM)
+  if (city.graph) rerouteOnOsm(plan, city);
   const labels = city.labels.map((l) => ({ text: l.text, at: l.at, h: l.h, cls: l.cls, maxDist: l.cls.includes('minor') ? 700 : 2600, y: groundY }));
   return {
     id, kind: id === 'lille' ? 'terminus' : 'through', group: g, plan, city, station,
@@ -95,4 +98,33 @@ function buildStationWorld(id) {
     layout: id === 'lille' ? LF : L,
     buildings: city.buildings,
   };
+}
+
+function rerouteOnOsm(plan, city) {
+  const G = city.graph;
+  const poiAt = (lieu) => (city.pois[lieu] ? [city.pois[lieu].x, city.pois[lieu].z] : null);
+  for (const [key, pts] of Object.entries(plan.routes || {})) {
+    const [mode, lieu] = key.split(':');
+    if (lieu === 'arrivee') continue;
+    const d = city.pois[lieu]?.delta || plan.osmDeltas?.[lieu] || [0, 0];
+    const last = pts[pts.length - 1];
+    const end = [last[0] + d[0], last[1] + d[1]];
+    const r = G.route(pts[0], end, 'drive');
+    if (r && r.length >= 2) {
+      plan.routes[key] = r;
+      const wk = `${lieu}:${mode}`;
+      const dest = poiAt(lieu);
+      if (dest) plan.walks[wk] = [end, dest];
+    }
+  }
+  for (const key of Object.keys(plan.walks || {})) {
+    const m = /^(\w+):marche(:sf)?$/.exec(key);
+    if (!m) continue;
+    const pts = plan.walks[key];
+    const dest = poiAt(m[1]) || pts[pts.length - 1];
+    // départ : sortie de la gare et traversée du parvis (maquette), puis réseau réel
+    const head = pts.slice(0, 3);
+    const r = G.route(head[head.length - 1], dest, 'walk');
+    if (r && r.length >= 2) plan.walks[key] = [...head, ...r.slice(1)];
+  }
 }
