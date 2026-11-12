@@ -276,7 +276,9 @@ export function stageTrain(ctx) {
 
 export function stageArrival(ctx) {
   const { data, dest, leg, stepFree, world, city } = ctx;
-  const T = dest.train;
+  // trajet local (destination dans la ville de la borne) : pas de train, on part du hall
+  const local = !!dest.local;
+  const T = dest.train || { quaiArrivee: 1, voiture: 1, arrivee: data.borne.heure };
   const quai = T.quaiArrivee;
   const group = new THREE.Group();
   const labels = [];
@@ -285,10 +287,13 @@ export function stageArrival(ctx) {
   /* --- train qui entre en gare --- */
   const train = makeTrain({ cars: 3, accent: true });
   const front = Math.max(...train.doors.filter((d) => d.car === T.voiture).map((d) => d.x));
-  group.add(train.object);
-  const arriveDur = 4.2;
+  if (!local) group.add(train.object);
+  const arriveDur = local ? 0 : 4.2;
   let placeTrain, doorPos;
-  if (world.kind === 'terminus') {
+  if (local) {
+    doorPos = V(-6, 0, 16.6); // borne du hall
+    placeTrain = () => {};
+  } else if (world.kind === 'terminus') {
     const tx = LF.tracks[quai - 1];
     const headStop = LF.buffer - 2.5;
     train.object.rotation.y = -Math.PI / 2;
@@ -307,9 +312,11 @@ export function stageArrival(ctx) {
   }
 
   /* --- itinéraire : quai → sortie → point de correspondance --- */
-  const pts = world.kind === 'terminus'
-    ? lilleArrivalRoute({ quai, doorZ: doorPos.z, stepFree })
-    : arrivalRoute({ quai, doorX: doorPos.x, stepFree });
+  const pts = local
+    ? [{ p: V(-6, 0, 16.6), cue: { text: 'Sortez de la gare', sub: 'Par les portes principales, devant vous' } }, { p: V(-3, 0, 19.5) }, { p: V(0, 0, 21.5) }, { p: V(0, 0, 24) }]
+    : world.kind === 'terminus'
+      ? lilleArrivalRoute({ quai, doorZ: doorPos.z, stepFree })
+      : arrivalRoute({ quai, doorX: doorPos.x, stepFree });
   const walkKey = leg.mode === 'marche' ? null : leg.point + (stepFree && world.walks[leg.point + ':sf'] ? ':sf' : '');
   const poi = leg.point ? world.pois[leg.point] : null;
   if (walkKey && world.walks[walkKey]) {
@@ -321,7 +328,7 @@ export function stageArrival(ctx) {
       pts.push({ p: V(x, gy, z), cue });
     });
     pts[pts.length - 1].cue = leg.mode === 'bus'
-      ? { text: `Attendez le bus ligne ${leg.ligne}`, sub: `Direction ${leg.direction} · départ ${leg.depart}` }
+      ? { text: `Attendez le ${(leg.vehicule || 'bus').toLowerCase()} ligne ${leg.ligne}`, sub: `Direction ${leg.direction} · départ ${leg.depart}` }
       : { text: 'Votre voiture arrive', sub: `${leg.vehicule} · ${leg.depart}` };
   } else {
     pts[pts.length - 1].cue = { text: 'Sortez sur le parvis', sub: `Ensuite : ${dest.nom} à pied` };
@@ -333,7 +340,8 @@ export function stageArrival(ctx) {
 
   /* --- véhicule de correspondance --- */
   let vehicle = null, vRoute = null, vStart = w.end + 0.4, vDur = 0;
-  if (leg.mode === 'bus' || leg.mode === 'voiture') {
+  // le métro arrive sous terre : pas de véhicule en surface à l'arrêt
+  if ((leg.mode === 'bus' && leg.vehicule !== 'Métro') || leg.mode === 'voiture') {
     const key = (leg.mode === 'bus' ? 'bus' : 'voiture') + ':arrivee';
     const rp = (world.routes[key] || [[poi.x + 150, poi.z + 6], [poi.x, poi.z + 6]]).map(([x, z]) => ({ p: V(x, gy + 0.02, z) }));
     vRoute = new Route(rp, { speeds: { walk: 30 } });
@@ -350,18 +358,21 @@ export function stageArrival(ctx) {
   beacon.object.position.copy(endP);
   group.add(beacon.object);
   if (poi) labels.push({ html: leg.nomPoint, cls: 'accent', pos: V(poi.x, gy + 4, poi.z) });
-  labels.push({ html: `Quai ${quai}`, cls: '', pos: doorPos.clone().add(V(0, 3.2, 0)) });
+  if (!local) labels.push({ html: `Quai ${quai}`, cls: '', pos: doorPos.clone().add(V(0, 3.2, 0)) });
+  else labels.push({ html: 'Vous êtes ici', cls: 'accent big', obj: w.marker.object, offset: V(0, 2.6, 0), until: walkStart + 1.5 });
 
-  const cues = [{ t: 0, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · quai ${quai}` }, ...route.cues(walkStart)];
+  const cues = [local
+    ? { t: 0, text: `Direction : ${dest.nom}`, sub: `Départ de la ${data.gares[city.id].nomComplet} à ${data.borne.heure}` }
+    : { t: 0, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · quai ${quai}` }, ...route.cues(walkStart)];
   if (vehicle) cues.push({ t: vStart + vDur + 0.2, text: 'Montez à bord', sub: leg.mode === 'bus' ? `Ligne ${leg.ligne} · direction ${leg.direction}` : `${leg.vehicule}` });
 
-  const arrMin = toMin(T.arrivee);
+  const arrMin = toMin(local ? data.borne.heure : T.arrivee);
   const realWalk = route.realSeconds();
   const depMin = toMin(leg.depart);
   const tmp = new THREE.Vector3();
   const isTerminus = world.kind === 'terminus';
   return {
-    id: 'arrivee', seg: 'correspondance', place: data.gares[city.id].nomComplet, world: city.id, duration, group, labels, cues, realWalk,
+    id: 'arrivee', seg: local ? 'gare' : 'correspondance', place: data.gares[city.id].nomComplet, world: city.id, duration, group, labels, cues, realWalk,
     update(t, time) {
       placeTrain(t);
       w.update(t, time);
@@ -379,6 +390,7 @@ export function stageArrival(ctx) {
     },
     camera(t) {
       if (t < walkStart) {
+        if (local) return { target: doorPos.clone().add(V(0, 0, 4)), yaw: 0.35, pitch: 0.95, dist: 90 };
         return isTerminus
           ? { target: doorPos.clone().add(V(-6, 0, 10)), yaw: Math.PI - 0.5, pitch: 0.88, dist: 120 }
           : { target: doorPos.clone().add(V(-6, 0, 0)), yaw: 0.45, pitch: 0.88, dist: 110 };
@@ -398,7 +410,7 @@ export function stageArrival(ctx) {
       return t < w.end ? walked : walked + (depMin - walked) * clamp01((t - w.end) / (boardT - w.end));
     },
     info() {
-      if (leg.mode === 'bus') return `<div class="ic-k">Correspondance</div><div class="ic-v"><span class="ic-line">${leg.ligne}</span>Bus</div>
+      if (leg.mode === 'bus') return `<div class="ic-k">${local ? 'Votre ligne' : 'Correspondance'}</div><div class="ic-v"><span class="ic-line">${leg.ligne}</span>${leg.vehicule || 'Bus'}</div>
         <div class="ic-k">Direction</div><div class="ic-v">${leg.direction}</div>
         <div class="ic-k">Arrêt · Départ</div><div class="ic-v">${leg.nomPoint.replace(/^Arrêt /, '')} · ${leg.depart}</div>`;
       if (leg.mode === 'voiture') return `<div class="ic-k">Prise en charge</div><div class="ic-v">${leg.nomPoint}</div>
@@ -429,13 +441,16 @@ export function stageDestination(ctx) {
     const key = (leg.mode === 'bus' ? 'bus:' : 'voiture:') + dest.lieu;
     const rpts = world.routes[key];
     const route = new Route(lift(rpts));
+    const metro = leg.vehicule === 'Métro';
     rideDur = Math.max(9, Math.min(18, route.length / 55));
-    ride = { route, ribbon: new PathRibbon(route, { width: 3.2, scale: 3 }) };
+    ride = { route, ribbon: new PathRibbon(route, { width: 3.2, scale: 3, dotted: metro }) };
     group.add(ride.ribbon.object);
-    vehicle = leg.mode === 'bus' ? makeBus({ line: leg.ligne, direction: leg.direction }) : makeCar({ accent: true });
+    vehicle = metro ? new TravelerMarker(3)
+      : leg.mode === 'bus' ? makeBus({ line: leg.ligne, direction: leg.direction }) : makeCar({ accent: true });
     group.add(vehicle.object);
-    labels.push({ html: leg.mode === 'bus' ? `<span class="tm">${leg.ligne}</span> ${leg.direction}` : 'Votre voiture', cls: 'accent', obj: vehicle.object, offset: V(0, leg.mode === 'bus' ? 5 : 3.5, 0), until: 1.4 + rideDur });
-    cues.push({ t: 0, text: leg.mode === 'bus' ? `Trajet en bus · ligne ${leg.ligne}` : 'Trajet en voiture', sub: leg.mode === 'bus' ? `Direction ${leg.direction}` : `${leg.vehicule}` });
+    labels.push({ html: leg.mode === 'bus' ? `<span class="tm">${metro ? 'Métro ' : ''}${leg.ligne}</span> ${leg.direction}` : 'Votre voiture', cls: 'accent', obj: vehicle.object, offset: V(0, leg.mode === 'bus' ? 5 : 3.5, 0), until: 1.4 + rideDur });
+    if (metro) labels.push({ html: 'Trajet souterrain', cls: 'soft', pos: route.posAt(route.length / 2).add(V(0, 3, 0)), until: 1.4 + rideDur });
+    cues.push({ t: 0, text: leg.mode === 'bus' ? `Trajet en ${(leg.vehicule || 'bus').toLowerCase()} · ligne ${leg.ligne}` : 'Trajet en voiture', sub: leg.mode === 'bus' ? `Direction ${leg.direction}` : `${leg.vehicule}` });
     cues.push({ t: 1.4 + rideDur - 1.6, text: leg.mode === 'bus' ? `Descendez à l’arrêt « ${leg.arretDescente} »` : 'Descendez de la voiture', sub: `${leg.arrivee}` });
     const wk0 = world.walks[`${dest.lieu}:${leg.mode}`] || [[rpts[rpts.length - 1][0], rpts[rpts.length - 1][1]]];
     const wk = [...wk0.slice(0, -1), [place.x, place.z]];

@@ -21,6 +21,25 @@
 - Vue d'ensemble de la destination orientée départ → arrivée (écran portrait).
 - Mention « plan © contributeurs OpenStreetMap » affichée en pied de page.
 
+## Destination libre (12/11)
+- Champ « Où souhaitez-vous aller ? » : clavier tactile AZERTY (src/ui/keyboard.js) et dictée
+  (bouton micro, API Web Speech : Chrome/Edge, en général avec Internet ; masqué si indisponible).
+- Recherche (src/journey/places.js) dans les noms OSM (rues, places, bâtiments, parcs), les arrêts
+  de bus et les monuments de la maquette ; la ville peut être dite dans la phrase
+  (« grand place de béthune », « place des héros arras »).
+- Horaires officiels GTFS (`npm run gtfs [AAAAMMJJ]` → src/data/gtfs.json, ≈ 0,6 Mo) :
+  TER Hauts-de-France (trains Béthune → Lens, Arras, Lille-Flandres), Tadao (Béthune, Lens),
+  Artis (Arras), Ilévia (Lille : bus, tram, et métro tracé en pointillés car souterrain).
+  Une seule journée de référence (vendredi 13/11/2026), utilisée tous les jours : c'est un test,
+  les horaires ne sont pas mis à jour (relancer `npm run gtfs AAAAMMJJ` pour changer de journée).
+  Les voies/quais ne figurent pas dans le GTFS : quai attribué de façon stable par numéro de train.
+- Calcul (src/journey/planner.js) : prochain TER après l'heure de la borne + 6 min, puis à pied ou
+  bus/tram (montée à moins de 520 m du parvis, descente à moins de 550 m du lieu, proposé seulement
+  s'il fait gagner 3 min). Destination à Béthune : pas de train, sortie de gare puis trajet.
+  Marches calculées sur les rues et cheminements piétons OSM (footway, path, steps).
+- Consignes lues à voix haute (voix française de Windows, hors ligne), bouton « Voix » dans le guidage.
+- Béthune agrandi (rayon 1 180 m) pour inclure la Grand-Place.
+
 ## Reste à faire
 1. Contrôle visuel complet avec `npm run shots` (Playwright requis).
 2. Lille : peu de bâtiments (≈ 2 700) car beaucoup d'îlots du centre sont des multipolygones OSM,

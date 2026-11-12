@@ -202,7 +202,7 @@ h2 { margin: 0 0 calc(var(--u) * 2.4); font-size: calc(var(--u) * 5); font-weigh
 .progress { height: 3px; border-radius: 3px; background: #e7edf2; overflow: hidden; margin: 0 calc(var(--u) * 1) calc(var(--u) * 1.6); }
 #progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan-2), var(--cyan)); }
 
-.controls { display: grid; grid-template-columns: repeat(6, 1fr); gap: calc(var(--u) * 1); }
+.controls { display: grid; grid-template-columns: repeat(7, 1fr); gap: calc(var(--u) * 1); }
 .ctl { border: 0; background: transparent; border-radius: calc(var(--u) * 1.6); min-height: calc(var(--u) * 9.4); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * 0.6); font-size: calc(var(--u) * 1.8); color: var(--text-2); font-weight: 600; transition: background 0.2s, transform 0.15s; }
 .ctl:active { transform: scale(0.95); background: #eef4f8; }
 .ctl.main { background: linear-gradient(180deg, #1fc0f0, #0ea5da); color: #fff; box-shadow: 0 calc(var(--u) * 0.5) calc(var(--u) * 1.6) rgba(14, 165, 218, 0.3); }
@@ -268,6 +268,48 @@ h2 { margin: 0 0 calc(var(--u) * 2.4); font-size: calc(var(--u) * 5); font-weigh
 .set-row input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--cyan); }
 .set-row select { grid-column: 1 / -1; padding: 6px; border-radius: 8px; border: 1px solid var(--line-strong); }
 .settings-hint { color: var(--text-3); font-size: 12px; margin: 10px 0 0; }
+
+/* ---------- Recherche libre, dictée, clavier tactile ---------- */
+.search-box { display: flex; align-items: center; gap: calc(var(--u) * 1.4); border: 1.5px solid var(--line-strong); background: var(--panel-solid);
+  border-radius: var(--radius); padding: 0 calc(var(--u) * 1.2) 0 calc(var(--u) * 2.4); min-height: calc(var(--u) * 10); transition: border-color 0.2s, box-shadow 0.2s; }
+.search-box:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 calc(var(--u) * 0.5) rgba(18, 179, 230, 0.16); }
+.search-box .ico-search { color: var(--text-3); flex: none; }
+#search { -webkit-user-select: text; user-select: text; flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: calc(var(--u) * 3.4); color: var(--text); padding: calc(var(--u) * 1.6) 0; }
+#search::placeholder { color: var(--text-3); }
+.mic { flex: none; width: calc(var(--u) * 7.6); height: calc(var(--u) * 7.6); border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--cyan-soft); color: var(--cyan); transition: background 0.2s, transform 0.15s; }
+.mic .ico { width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); }
+.mic.listening { background: var(--cyan); color: #fff; animation: mic-pulse 1.2s ease-in-out infinite; }
+@keyframes mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(18, 179, 230, 0.45); } 50% { box-shadow: 0 0 0 calc(var(--u) * 1.6) rgba(18, 179, 230, 0); } }
+.search-hint { margin: calc(var(--u) * 1.2) 0 0; font-size: calc(var(--u) * 2.1); color: var(--text-3); }
+.search-hint.error { color: #b4532a; }
+#suggest { margin-top: calc(var(--u) * 1.4); }
+#suggest:empty { display: none; }
+.choice.sugg { min-height: calc(var(--u) * 8); padding: calc(var(--u) * 1.4) calc(var(--u) * 2.4); }
+.choice.sugg .c-title { font-size: calc(var(--u) * 3); }
+.keyboard { display: none; margin-top: calc(var(--u) * 1.8); gap: calc(var(--u) * 0.9); }
+.home-panel.kb-open .keyboard { display: grid; }
+/* pendant la saisie, panneau ancré en haut : les touches ne bougent pas quand les suggestions changent */
+.home-panel.kb-open { top: calc(var(--u) * 12); bottom: auto; }
+.kb-row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: calc(var(--u) * 0.9); }
+.kb-key { border: 1px solid var(--line); background: var(--panel-solid); border-radius: calc(var(--u) * 1.2); min-height: calc(var(--u) * 7.2);
+  font: inherit; font-size: calc(var(--u) * 3); color: var(--text); box-shadow: 0 1px 0 rgba(38, 60, 82, 0.08); }
+.kb-key:active { background: var(--cyan-soft); transform: scale(0.96); }
+.kb-key.space { grid-column: span 4; font-size: calc(var(--u) * 2.2); color: var(--text-2); }
+.kb-key.wide { grid-column: span 2; }
+.kb-key.wide2 { grid-column: span 2; font-size: calc(var(--u) * 2); color: var(--text-2); }
+.kb-key.ok { background: var(--cyan); color: #fff; border-color: transparent; font-weight: 600; }
+/* recherche active : on masque les choix de démonstration ; lieu choisi : idem */
+.home-panel.searching #demo-steps, .home-panel.custom #demo-steps { display: none; }
+.home-panel.custom #mode-list { grid-auto-flow: row; }
+.home-panel.custom .choice.mode { min-height: calc(var(--u) * 8.4); }
+.home-panel.kb-open #mode-label, .home-panel.kb-open #mode-list, .home-panel.kb-open .home-footer { display: none; }
+.ico-search { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6.5'/%3E%3Cpath d='M16 16l4.5 4.5'/%3E%3C/svg%3E"); }
+.ico-mic { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round'%3E%3Crect x='9' y='3' width='6' height='11' rx='3'/%3E%3Cpath d='M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21'/%3E%3C/svg%3E"); }
+.ico-voice { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9.5h3.5L12 5.5v13l-4.5-4H4z'/%3E%3Cpath d='M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11'/%3E%3C/svg%3E"); }
+#ctl-voice[aria-pressed='false'] .ico { opacity: 0.45; }
+.frise.local li[data-seg='train'], .frise.local li[data-seg='correspondance'] { display: none; }
+.mi-tram { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2312b3e6' stroke-width='1.7' stroke-linejoin='round'%3E%3Crect x='5' y='5' width='14' height='13' rx='3'/%3E%3Cpath d='M5 11h14M9 2.5h6M12 2.5V5M8 21l1.5-3M16 21l-1.5-3'/%3E%3C/svg%3E"); }
 
 /* appareils légers : pas de flou d'arrière-plan (coûteux en GPU) */
 body.light .panel, body.light .instruction, body.light .hud-bottom, body.light .infocard { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(255,255,255,0.96); }

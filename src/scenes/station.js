@@ -392,7 +392,7 @@ export function departureRoute({ quai, boardX, stepFree, start = V(-6, 0, 16.6) 
       { p: V(20, L.under.y, 7.4), cue: { text: 'Empruntez le passage souterrain', sub: 'Il passe sous les voies 1 et 2' } },
       { p: V(20, L.under.y, -17.5) },
       { p: V(18, L.under.y, -17.5), cue: { text: `Montez vers le quai ${quai}`, sub: 'Escalier de droite' } },
-      { p: V(11.2, 0, -17.5), kind: 'stairs', cue: { text: `Continuez jusqu’au quai ${quai}`, sub: 'Repère voiture ' } },
+      { p: V(11.2, 0, -17.5), kind: 'stairs', cue: { text: `Continuez jusqu’au quai ${quai}`, sub: 'Avancez jusqu’au repère de votre voiture' } },
       { p: V(Math.min(8.5, boardX + 3), 0, islandEdge) },
       { p: V(boardX, 0, bz), cue: { text: 'Votre train se trouve ici', sub: 'Montez à bord' }, final: true },
     ];
@@ -410,7 +410,7 @@ export function departureRoute({ quai, boardX, stepFree, start = V(-6, 0, 16.6) 
     { p: V(20, L.under.y, liz) },
     { p: V(lhx, L.under.y, liz), cue: { text: `Prenez l’ascenseur vers le quai ${quai}`, sub: 'Quai central 2 | 3' }, wait: 0.6 },
     { p: V(lhx, 0, liz), kind: 'lift', wait: 0.8 },
-    { p: V(lhx, 0, exitZ), cue: { text: `Continuez jusqu’au quai ${quai}`, sub: 'Repère voiture ' } },
+    { p: V(lhx, 0, exitZ), cue: { text: `Continuez jusqu’au quai ${quai}`, sub: 'Avancez jusqu’au repère de votre voiture' } },
     { p: V(Math.min(16, boardX + 4), 0, islandEdge) },
     { p: V(boardX, 0, bz), cue: { text: 'Votre train se trouve ici', sub: 'Montez à bord' }, final: true },
   ];

@@ -22,8 +22,8 @@ async function request(url, q) {
   return r.json();
 }
 const CITIES = {
-  bethune: { name: 'Béthune', bbox: [50.50, 2.60, 50.55, 2.68], radius: 950 },
-  lens: { name: 'Lens', bbox: [50.41, 2.80, 50.45, 2.86], radius: 1000 },
+  bethune: { name: 'Béthune', bbox: [50.50, 2.60, 50.55, 2.68], radius: 1250 }, // jusqu'à la Grand-Place (≈ 1 km)
+  lens: { name: 'Lens', bbox: [50.41, 2.80, 50.45, 2.86], radius: 1250 }, // jusqu'au stade Bollaert (≈ 1,1 km)
   arras: { name: 'Arras', bbox: [50.27, 2.75, 50.31, 2.81], radius: 850 },
   lille: { name: 'Lille[- ]Flandres' /* nom OSM : « Lille-Flandres » */, bbox: [50.62, 3.05, 50.65, 3.09], radius: 800 },
 };
@@ -55,7 +55,7 @@ for (const [id, c] of Object.entries(CITIES)) {
   const R = c.radius;
   const data = await overpass(`[out:json][timeout:120];(
     way["building"](around:${R},${lat0},${lon0});
-    way["highway"~"^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian|service|trunk)$"](around:${R},${lat0},${lon0});
+    way["highway"~"^(primary|secondary|tertiary|residential|unclassified|living_street|pedestrian|service|trunk|footway|path|steps|cycleway)$"](around:${R},${lat0},${lon0});
     way["railway"="rail"](around:${R},${lat0},${lon0});
     way["leisure"="park"](around:${R},${lat0},${lon0});
     way["place"="square"](around:${R},${lat0},${lon0});

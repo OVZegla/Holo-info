@@ -23,17 +23,23 @@ const ribbonFS = /* glsl */ `
   uniform float uTime;
   uniform float uOpacity;
   uniform float uScale;
+  uniform float uDotted;
   varying vec2 vUv;
   #include <fog_pars_fragment>
   void main() {
     float d = vUv.y;
     if (d > uReveal) discard;
     float across = abs(vUv.x - 0.5) * 2.0;
+    // pointillés (trajet souterrain : métro) — points ronds espacés
+    if (uDotted > 0.5) {
+      float s = fract(d / (2.6 * uScale));
+      if (length(vec2((s - 0.22) / 0.22, across)) > 1.0) discard;
+    }
     float edge = 1.0 - smoothstep(0.78, 1.0, across);
     float border = smoothstep(0.55, 0.8, across) * (1.0 - smoothstep(0.86, 1.0, across));
     // chevrons qui défilent vers l'avant
     float ph = fract((d / uScale - across * 0.45) * 0.42 - uTime * 0.55);
-    float chev = smoothstep(0.0, 0.06, ph) * (1.0 - smoothstep(0.30, 0.36, ph));
+    float chev = smoothstep(0.0, 0.06, ph) * (1.0 - smoothstep(0.30, 0.36, ph)) * (1.0 - uDotted);
     float done = step(d, uProgress);
     vec3 col = mix(uColor, vec3(1.0), chev * 0.6 * (1.0 - done));
     col = mix(col, uColorDone, done);
@@ -48,7 +54,7 @@ const ribbonFS = /* glsl */ `
 `;
 
 export class PathRibbon {
-  constructor(route, { width = 1.0, lift = 0.06, color = '#12b3e6', doneColor = '#a8e6f8', scale = 1 } = {}) {
+  constructor(route, { width = 1.0, lift = 0.06, color = '#12b3e6', doneColor = '#a8e6f8', scale = 1, dotted = false } = {}) {
     this.route = route;
     const pts = route.points.map((p) => p.p);
     const pos = [], uv = [], idx = [];
@@ -91,6 +97,7 @@ export class PathRibbon {
         uTime: { value: 0 },
         uOpacity: { value: 1 },
         uScale: { value: scale },
+        uDotted: { value: dotted ? 1 : 0 },
       },
     ]);
     const mat = new THREE.ShaderMaterial({
@@ -98,8 +105,10 @@ export class PathRibbon {
       transparent: true, depthWrite: false, fog: true, side: THREE.DoubleSide,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
     });
+    // tracé souterrain : visible à travers les bâtiments
+    if (dotted) mat.depthTest = false;
     this.mesh = new THREE.Mesh(g, mat);
-    this.mesh.renderOrder = 5;
+    this.mesh.renderOrder = dotted ? 20 : 5;
     this.mesh.raycast = () => {};
     this.object = new THREE.Group();
     this.object.add(this.mesh);

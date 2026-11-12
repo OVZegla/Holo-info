@@ -61,7 +61,8 @@ function bethune() {
   const beff = geo([-40, 780]);
   const stationZone = [-95, -30, 95, 26];
   return {
-    id: 'bethune', radius: 900, seed: 11, local: true, facadeBearing: 10, modelZone: [-160, -45, 160, 62],
+    // rayon 1180 : inclut la Grand-Place (≈ 1 km au nord) pour les destinations libres
+    id: 'bethune', radius: 1180, seed: 11, local: true, facadeBearing: 10, modelZone: [-160, -45, 160, 62],
     heights: { min: 7, max: 15, center: beff, falloff: 900, gable: 0.55, wMin: 6, wMax: 13, dMin: 9, dMax: 14 },
     areas: [
       { poly: rect(0, 32, 1, 0, 120, 22), kind: 'square', model: true },
@@ -98,7 +99,8 @@ function lens() {
   const stade = geo([-880, 420]);
   const pavillon = [stade[0] + 110, stade[1] + 120];
   return {
-    id: 'lens', radius: 950, seed: 23, local: true, facadeBearing: 160, modelZone: [-160, -45, 160, 62],
+    // rayon 1180 : le stade Bollaert (≈ 1,1 km) tient dans le décor
+    id: 'lens', radius: 1180, seed: 23, local: true, facadeBearing: 160, modelZone: [-160, -45, 160, 62],
     heights: { min: 6, max: 14, center: [60, 380], falloff: 800, gable: 0.7, wMin: 6, wMax: 12, dMin: 8, dMax: 13 },
     areas: [
       { poly: rect(-10, 33, 1, 0, 120, 26), kind: 'square', model: true },

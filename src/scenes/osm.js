@@ -64,6 +64,7 @@ export function osmFrame(osm, plan) {
 /* ------------------------------------------------------------------ */
 const DRIVE = new Set(['trunk', 'primary', 'secondary', 'tertiary', 'residential', 'unclassified', 'living_street', 'trunk_link', 'primary_link', 'secondary_link', 'tertiary_link']);
 const WALK_EXCLUDE = new Set(['trunk', 'motorway', 'motorway_link', 'trunk_link']);
+const FOOT = new Set(['footway', 'path', 'steps', 'cycleway']);
 
 export class RoadGraph {
   constructor(roads) {
@@ -86,7 +87,7 @@ export class RoadGraph {
         if (DRIVE.has(r.k)) { this.adj.drive[a].push([b, w]); this.adj.drive[b].push([a, w]); }
         if (!WALK_EXCLUDE.has(r.k)) {
           // les piétons préfèrent les rues calmes et piétonnes
-          const pw = w * (r.k === 'pedestrian' || r.k === 'living_street' || r.k === 'footway' ? 0.8 : r.k === 'primary' ? 1.25 : 1);
+          const pw = w * (r.k === 'pedestrian' || r.k === 'living_street' || r.k === 'footway' ? 0.8 : r.k === 'steps' ? 1.4 : r.k === 'primary' ? 1.25 : 1);
           this.adj.walk[a].push([b, pw]); this.adj.walk[b].push([a, pw]);
         }
       }
@@ -287,7 +288,8 @@ export function applyOsm(plan) {
   const modelStreets = (plan.streets || []).filter((s) => s.model);
   plan.streets = [
     ...modelStreets,
-    ...roads.map((r) => ({ pts: r.pts, w: ROAD_WIDTH[r.k] || 6, noBuild: true, trees: r.k === 'primary' || r.k === 'secondary' ? 'sparse' : false })),
+    // trottoirs, passages et escaliers : utilisés pour les marches, pas dessinés (ils doubleraient les rues)
+    ...roads.filter((r) => !FOOT.has(r.k)).map((r) => ({ pts: r.pts, w: ROAD_WIDTH[r.k] || 6, noBuild: true, trees: r.k === 'primary' || r.k === 'secondary' ? 'sparse' : false })),
   ];
   plan.rails = [];
   for (const r of osm.rails) for (const part of splitOutside(r.p.map(T), plan.reserve || [])) plan.rails.push({ pts: part, tracks: 1, single: true });

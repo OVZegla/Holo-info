@@ -28,11 +28,22 @@
         <div class="panel home-panel">
           <p class="eyebrow" id="home-from">Départ : Béthune · Hall principal</p>
           <h1>Où souhaitez-vous aller&nbsp;?</h1>
-          <div class="step-label"><span>1</span> Ville d'arrivée</div>
-          <div class="choice-row" id="city-list"></div>
-          <div class="step-label"><span>2</span> Lieu de destination</div>
-          <div class="choice-col" id="place-list"></div>
-          <div class="step-label" id="mode-label"><span>3</span> Après le train</div>
+          <div class="search-box" id="search-box">
+            <i class="ico ico-search" aria-hidden="true"></i>
+            <input id="search" type="text" inputmode="none" autocomplete="off" spellcheck="false"
+              placeholder="Une rue, une place, un lieu…" aria-label="Destination" />
+            <button class="mic" id="mic" type="button" aria-label="Dicter la destination" hidden><i class="ico ico-mic"></i></button>
+          </div>
+          <p class="search-hint" id="search-hint">Par exemple : « Grand-Place de Béthune », « Euralille », « Place des Héros Arras »</p>
+          <div class="keyboard" id="keyboard"></div>
+          <div class="choice-col" id="suggest"></div>
+          <div id="demo-steps">
+            <div class="step-label"><span>1</span> Ou choisissez une ville d'arrivée</div>
+            <div class="choice-row" id="city-list"></div>
+            <div class="step-label"><span>2</span> Lieu de destination</div>
+            <div class="choice-col" id="place-list"></div>
+          </div>
+          <div class="step-label" id="mode-label"><span>3</span> <b id="mode-title">Après le train</b></div>
           <div class="choice-row" id="mode-list"></div>
           <div class="home-footer">
             <button class="toggle" id="stepfree" aria-pressed="false">
@@ -81,6 +92,7 @@
             <button class="ctl main" id="ctl-play" aria-label="Lecture / pause"><i class="ico ico-pause"></i><span>Pause</span></button>
             <button class="ctl" id="ctl-next" aria-label="Étape suivante"><i class="ico ico-next"></i><span>Suivant</span></button>
             <button class="ctl" id="ctl-overview" aria-label="Vue d'ensemble"><i class="ico ico-overview"></i><span>Vue d'ensemble</span></button>
+            <button class="ctl active" id="ctl-voice" aria-label="Consignes à voix haute" aria-pressed="true"><i class="ico ico-voice"></i><span>Voix</span></button>
           </nav>
         </div>
       </section>
