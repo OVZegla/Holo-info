@@ -259,6 +259,7 @@ function lille() {
       { type: 'espaceHorizon', at: horizon, rot: 55, id: 'horizon-bldg' },
     ],
     reserve: [[-48, -900, 48, 22], [-12, 20, 12, 25], [-36, 20, -24, 35]],
+    noBuild: [[-150, 20, 160, 72]],
     pois: {
       'arret-bus': { at: [-50, 36.6], rot: 180, label: 'Arrêt de bus' },
       'depose-minute': { at: [42, 36.6], rot: 180, label: 'Dépose-minute' },

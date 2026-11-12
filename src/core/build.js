@@ -235,7 +235,7 @@ export function signPanel({ w = 3, h = 0.8, lines = [], style = 'light', draw = 
       y += size;
     }
   });
-  const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, side: double ? THREE.DoubleSide : THREE.FrontSide });
+  const mat = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, transparent: true, alphaTest: 0.02, side: double ? THREE.DoubleSide : THREE.FrontSide });
   const g = new THREE.PlaneGeometry(w, h);
   const m = new THREE.Mesh(g, mat);
   m.userData.sign = true;

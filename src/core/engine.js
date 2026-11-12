@@ -108,7 +108,7 @@ export class Engine {
     this.labels = new LabelLayer(labelsEl);
 
     // éclairage doux : ciel + soleil rasant légèrement
-    this.hemi = new THREE.HemisphereLight('#ffffff', '#cfd8e0', 1.25);
+    this.hemi = new THREE.HemisphereLight('#ffffff', '#dfe6ec', 1.45);
     this.scene.add(this.hemi);
     this.sun = new THREE.DirectionalLight('#ffffff', 2.0);
     this.sunDir = new THREE.Vector3(-0.55, 1.0, 0.42).normalize();
@@ -118,8 +118,8 @@ export class Engine {
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.04;
     this.scene.add(this.sun, this.sun.target);
-    this.fill = new THREE.DirectionalLight('#eef6ff', 0.35);
-    this.fill.position.set(0.6, 0.5, -0.8);
+    this.fill = new THREE.DirectionalLight('#f2f8ff', 0.9);
+    this.fill.position.set(0.5, 0.45, -0.9);
     this.scene.add(this.fill);
 
     // sol infini (se fond dans la brume)
@@ -152,6 +152,14 @@ export class Engine {
     this.w = w; this.h = h;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    this.setViewShift(this.viewShift || 0);
+  }
+
+  /** Décale verticalement le centre de projection (fraction de la hauteur, + = contenu vers le haut). */
+  setViewShift(f) {
+    this.viewShift = f;
+    if (Math.abs(f) < 1e-4) this.camera.clearViewOffset();
+    else this.camera.setViewOffset(this.w, this.h, 0, this.h * f, this.w, this.h);
     this.camera.updateProjectionMatrix();
   }
 
@@ -165,7 +173,7 @@ export class Engine {
     this.sun.shadow.radius = s.douceurOmbres;
     this.sun.shadow.blurSamples = 16;
     // sans intensité d'ombre native, on compense par l'éclairage d'ambiance
-    this.hemi.intensity = 1.25 + (1 - sh) * 0.15;
+    this.hemi.intensity = 1.45 + (1 - sh) * 0.15;
     this.ground.material.color.copy(palette.color('ground'));
     this.scene.background.copy(BG);
   }

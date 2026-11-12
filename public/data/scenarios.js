@@ -9,7 +9,7 @@
  *  Règles :
  *   - Les horaires sont au format "HH:MM".
  *   - "quai" : numéro de quai existant dans la gare 3D (voir README, section
- *     « Quais disponibles »). Béthune, Lens, Arras : 1, 2 ou 3. Lille-Flandres : 4 à 7.
+ *     « Quais disponibles »). Béthune, Lens, Arras : 1, 2 ou 3. Lille-Flandres : 1 à 8.
  *   - Les textes s'affichent tels quels sur la borne : rester court.
  *   - Les temps de marche dans les gares sont calculés automatiquement à partir
  *     des chemins 3D (ils ne sont pas à saisir ici).
@@ -88,10 +88,10 @@ window.HOLO_DONNEES = {
           ],
         },
         {
-          id: 'lille-beffroi',
-          nom: 'Maison du Beffroi',
+          id: 'lille-theatre',
+          nom: 'Maison des Beffrois',
           type: 'Accueil des visiteurs',
-          lieu: 'beffroi',
+          lieu: 'theatre',
           train: {
             numero: 'TER 847512',
             direction: 'Lille-Flandres',
@@ -107,15 +107,11 @@ window.HOLO_DONNEES = {
           },
           correspondances: [
             {
-              mode: 'bus',
-              ligne: '9',
-              direction: 'Hôtel de Ville',
-              point: 'arret-bus',
-              nomPoint: 'Arrêt Lille-Flandres — Quai B',
-              depart: '09:44',
-              arrivee: '09:51',
-              arretDescente: 'Beffroi',
-              marcheFinale: 2,
+              mode: 'marche',
+              nomPoint: 'Sortie Place de la Gare',
+              depart: '09:36',
+              arrivee: '09:43',
+              marcheFinale: 0,
             },
           ],
         },

@@ -173,6 +173,7 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
   const plinth = [-R, -R, R, R];
   const holes = reserve.map((r) => r);
   g.add(slabTwoTone(plinth, holes, y));
+  for (const r of plan.noBuild || []) grid.fillPoly([[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]], 2);
   for (const r of reserve) grid.fillPoly([[r[0] - 2, r[1] - 2], [r[2] + 2, r[1] - 2], [r[2] + 2, r[3] + 2], [r[0] - 2, r[3] + 2]], 2);
   // bord du socle : liseré cyan très discret
   const rim = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2 * R, 0.01, 2 * R)), new THREE.LineBasicMaterial({ color: '#8fe0f8', transparent: true, opacity: 0.6 }));

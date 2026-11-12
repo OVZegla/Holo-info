@@ -81,7 +81,7 @@ export function buildRegion() {
   shape.quadraticCurveTo(x0, -z1, x0, -z1 + r); shape.lineTo(x0, -z0 - r); shape.quadraticCurveTo(x0, -z0, x0 + r, -z0);
   const plateGeo = new THREE.ExtrudeGeometry(shape, { depth: 6, bevelEnabled: true, bevelSize: 1.2, bevelThickness: 1.2, bevelSegments: 3 });
   plateGeo.rotateX(-Math.PI / 2);
-  plateGeo.translate(0, -6, 0);
+  plateGeo.translate(0, -7.2, 0);
   const plate = new THREE.Mesh(plateGeo, palette.get('ground'));
   plate.receiveShadow = true; plate.castShadow = true;
   g.add(plate);
@@ -104,7 +104,7 @@ export function buildRegion() {
     const major = MAJOR.includes(name) || name === 'Lille-Flandres';
     if (name === 'Lille-Flandres') continue;
     const rad = name === 'Lille' ? 34 : major ? 18 : 8;
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(rad, 40).rotateX(-Math.PI / 2), palette.get('floor2'));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(rad, 40).rotateX(-Math.PI / 2), palette.get('socle'));
     disc.position.set(x, 0.05, z);
     disc.receiveShadow = true;
     g.add(disc);
@@ -142,7 +142,7 @@ export function buildRegion() {
 
   // réseau de contexte (gris)
   const ctxGeos = [];
-  for (const line of CONTEXT_LINES) ctxGeos.push(lineGeo(smoothLine(line, 0.2), 0.7, 0.2));
+  for (const line of CONTEXT_LINES) ctxGeos.push(lineGeo(smoothLine(line, 0.25), 1.5, 0.25));
   const net = new THREE.Mesh(mergeGeometries(ctxGeos), palette.get('detail'));
   net.receiveShadow = true;
   g.add(net);
@@ -178,7 +178,7 @@ export function trainPath(stops) {
 }
 
 export function routeLineMesh(pts) {
-  const m = new THREE.Mesh(lineGeo(pts, 1.6, 0.42), new THREE.MeshBasicMaterial({ color: '#12b3e6', transparent: true, opacity: 0.95 }));
+  const m = new THREE.Mesh(lineGeo(pts, 3.2, 0.5), new THREE.MeshBasicMaterial({ color: '#12b3e6', transparent: true, opacity: 0.95 }));
   m.material.userData.owned = true;
   return m;
 }

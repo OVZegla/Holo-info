@@ -41,6 +41,8 @@ const ribbonFS = /* glsl */ `
     float head = 1.0 - smoothstep(uReveal - 2.0 * uScale, uReveal, d) * 0.6;
     float a = edge * mix(0.92, 0.5, done) * head * uOpacity;
     gl_FragColor = vec4(col, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
     #include <fog_fragment>
   }
 `;
@@ -194,7 +196,7 @@ export class Beacon {
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: { uColor: { value: new THREE.Color('#12b3e6') }, uO: { value: 1 } },
       vertexShader: 'varying float vY; void main(){ vY = uv.y; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader: 'uniform vec3 uColor; uniform float uO; varying float vY; void main(){ gl_FragColor = vec4(uColor, (1.0-vY)*0.55*uO); }',
+      fragmentShader: 'uniform vec3 uColor; uniform float uO; varying float vY; void main(){ gl_FragColor = vec4(uColor, (1.0-vY)*0.55*uO);\n#include <colorspace_fragment>\n}',
     });
     colMat.userData.owned = true;
     this.col = new THREE.Mesh(colGeo, colMat);
@@ -220,7 +222,7 @@ export function highlightShell(obj, inflate = 0.25) {
   const size = box.getSize(new THREE.Vector3());
   const c = box.getCenter(new THREE.Vector3());
   const g = new THREE.BoxGeometry(size.x + inflate * 2, size.y + inflate * 2, size.z + inflate * 2);
-  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: '#12b3e6', transparent: true, opacity: 0.12, depthWrite: false }));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: '#12b3e6', transparent: true, opacity: 0.05, depthWrite: false }));
   m.material.userData.owned = true;
   m.position.copy(c);
   const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: '#12b3e6', transparent: true, opacity: 0.8 }));

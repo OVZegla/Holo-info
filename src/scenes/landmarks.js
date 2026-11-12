@@ -639,7 +639,12 @@ export function pavillon({ w = 40, d = 28, h = 12, name = '' } = {}) {
   glass.position.y = (h - 3) / 2 + 0.6;
   g.add(glass);
   g.add(block(-w / 2 - 2, h - 1.2, -d / 2 - 2, w / 2 + 2, h, d / 2 + 2, 'roof'));
-  g.add(block(-w / 2 - 2, h - 0.15, -d / 2 - 2, w / 2 + 2, h + 0.05, d / 2 + 2, palette.accent('accent', { glow: 0.3 }), { edges: false }));
+  const acc = palette.accent('accent', { glow: 0.3 });
+  for (const s of [-1, 1]) {
+    g.add(block(-w / 2 - 2, h - 0.6, s * (d / 2 + 2) - 0.25, w / 2 + 2, h + 0.05, s * (d / 2 + 2) + 0.25, acc, { edges: false }));
+    g.add(block(s * (w / 2 + 2) - 0.25, h - 0.6, -d / 2 - 2, s * (w / 2 + 2) + 0.25, h + 0.05, d / 2 + 2, acc, { edges: false }));
+  }
+  g.userData.depth = d + 4;
   if (name) {
     const s = signPanel({ w: Math.min(w * 0.6, 18), h: 1.4, key: 'pav-' + name, draw: (ctx, W, H) => {
       ctx.clearRect(0, 0, W, H);
@@ -660,6 +665,7 @@ export function espaceHorizon() {
   ring.position.y = 16;
   g.add(ring);
   g.add(cyl(8.6, 8.6, 2.4, 40, 'white', 14));
+  g.userData.depth = 42;
   return g;
 }
 
