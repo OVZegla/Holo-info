@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Mon trajet — borne 3D</title>
+    <!-- Données modifiables sans recompilation (voir README) -->
+    <script src="./data/scenarios.js"></script>
+    <script src="./data/reglages.js"></script>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage"></div>
+      <div id="labels"></div>
+      <div id="fade"></div>
+
+      <header id="topbar">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span class="brand-text">Mon trajet</span>
+          <span class="brand-sub" id="brand-sub">Gare de Béthune</span>
+        </div>
+        <button class="clock" id="clock" aria-label="Heure simulée">08:41</button>
+      </header>
+
+      <!-- Accueil -->
+      <section id="screen-home" class="screen">
+        <div class="panel home-panel">
+          <p class="eyebrow" id="home-from">Départ : Béthune · Hall principal</p>
+          <h1>Où souhaitez-vous aller&nbsp;?</h1>
+          <div class="step-label"><span>1</span> Ville d'arrivée</div>
+          <div class="choice-row" id="city-list"></div>
+          <div class="step-label"><span>2</span> Lieu de destination</div>
+          <div class="choice-col" id="place-list"></div>
+          <div class="step-label" id="mode-label"><span>3</span> Après le train</div>
+          <div class="choice-row" id="mode-list"></div>
+          <div class="home-footer">
+            <button class="toggle" id="stepfree" aria-pressed="false">
+              <span class="toggle-ico" aria-hidden="true"></span>
+              <span>Parcours sans escalier</span>
+              <span class="toggle-switch"><span></span></span>
+            </button>
+            <button class="btn primary big" id="go-summary">Continuer</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Récapitulatif -->
+      <section id="screen-summary" class="screen">
+        <div class="panel summary-panel">
+          <p class="eyebrow">Votre trajet</p>
+          <h2 id="sum-title">Béthune → Espace Horizon</h2>
+          <div id="sum-body"></div>
+          <div class="summary-actions">
+            <button class="btn ghost big" id="sum-back">Modifier</button>
+            <button class="btn primary big" id="go-journey">Visualiser mon trajet</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Guidage -->
+      <section id="hud" class="screen">
+        <div class="instruction" id="instruction">
+          <div class="ins-meta"><span id="ins-place">Gare de Béthune</span><span id="ins-count">1/6</span></div>
+          <div class="ins-text" id="ins-text">Traversez le hall</div>
+          <div class="ins-sub" id="ins-sub"></div>
+        </div>
+        <div class="infocard" id="infocard"></div>
+        <div class="hud-bottom">
+          <ol class="frise" id="frise">
+            <li data-seg="gare"><span class="dot"></span><span>Gare</span></li>
+            <li data-seg="train"><span class="dot"></span><span>Train</span></li>
+            <li data-seg="correspondance"><span class="dot"></span><span>Correspondance</span></li>
+            <li data-seg="destination"><span class="dot"></span><span>Destination</span></li>
+          </ol>
+          <div class="progress"><div id="progress-bar"></div></div>
+          <nav class="controls">
+            <button class="ctl" id="ctl-home" aria-label="Accueil"><i class="ico ico-home"></i><span>Accueil</span></button>
+            <button class="ctl" id="ctl-prev" aria-label="Étape précédente"><i class="ico ico-prev"></i><span>Précédent</span></button>
+            <button class="ctl" id="ctl-replay" aria-label="Rejouer l'étape"><i class="ico ico-replay"></i><span>Rejouer</span></button>
+            <button class="ctl main" id="ctl-play" aria-label="Lecture / pause"><i class="ico ico-pause"></i><span>Pause</span></button>
+            <button class="ctl" id="ctl-next" aria-label="Étape suivante"><i class="ico ico-next"></i><span>Suivant</span></button>
+            <button class="ctl" id="ctl-overview" aria-label="Vue d'ensemble"><i class="ico ico-overview"></i><span>Vue d'ensemble</span></button>
+          </nav>
+        </div>
+      </section>
+
+      <!-- Fin -->
+      <section id="screen-end" class="screen">
+        <div class="panel end-panel">
+          <div class="end-badge"></div>
+          <p class="eyebrow">Vous êtes arrivé</p>
+          <h2 id="end-title">Espace Horizon</h2>
+          <div id="end-body"></div>
+          <div class="summary-actions">
+            <button class="btn ghost big" id="end-replay">Revoir le parcours</button>
+            <button class="btn primary big" id="end-home">Autre destination</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Réglages (maintenance) -->
+      <section id="settings" class="settings" hidden>
+        <div class="settings-head">
+          <strong>Réglages d'affichage</strong>
+          <button class="btn small" id="set-close">Fermer</button>
+        </div>
+        <div id="set-body"></div>
+        <div class="settings-actions">
+          <button class="btn small" id="set-reset">Valeurs par défaut</button>
+          <button class="btn small" id="set-copy">Copier les réglages</button>
+        </div>
+        <p class="settings-hint" id="set-fps"></p>
+      </section>
+
+      <footer id="disclaimer">Démonstration — données et plans fictifs<span id="osm-credit"></span></footer>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
