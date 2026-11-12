@@ -1,5 +1,5 @@
 // Import des emprises de bâtiments et des rues réelles (OpenStreetMap, via Overpass)
-// autour des 4 gares. Usage : npm run osm   (nécessite un accès à overpass-api.de)
+// autour des 4 gares. Usage : npm run osm   (Windows, macOS, Linux ; nécessite curl, inclus dans Windows 10/11)
 // Résultat : src/data/osm-<ville>.json (coordonnées en mètres Est/Nord depuis la gare).
 // Données © contributeurs OpenStreetMap, licence ODbL.
 import fs from 'node:fs';
@@ -21,7 +21,7 @@ async function overpass(q) {
       try {
         const out = execFileSync('curl', ['-sS', '--fail', '-m', '300', '-A', 'holo-trajet-poc', '--data-urlencode', 'data=' + q, url], { maxBuffer: 512 * 1024 * 1024 });
         return JSON.parse(out.toString());
-      } catch (e) { last = e; console.error('échec', url, String(e.message).slice(0, 120)); execFileSync('sleep', ['5']); }
+      } catch (e) { last = e; console.error('échec', url, String(e.message).slice(0, 120)); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000); }
     }
   }
   throw last;
