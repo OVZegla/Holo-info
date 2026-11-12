@@ -383,7 +383,7 @@ export function stageArrival(ctx) {
           ? { target: doorPos.clone().add(V(-6, 0, 10)), yaw: Math.PI - 0.5, pitch: 0.88, dist: 120 }
           : { target: doorPos.clone().add(V(-6, 0, 0)), yaw: 0.45, pitch: 0.88, dist: 110 };
       }
-      if (vehicle && t > w.end - 0.5) return { target: endP.clone().add(V(14, 0, 2)), yaw: 0.45, pitch: 0.8, dist: 95 };
+      if (vehicle && t > w.end - 0.5) return { target: V(endP.x * 0.55, endP.y, (endP.z + 12) / 2), yaw: 0.22, pitch: 0.82, dist: 135 };
       const p = smoothPos(route, w.dist, t);
       const under = p.y < -1.5 ? 1 : 0;
       const outside = p.z > 20 ? 1 : 0;
@@ -487,7 +487,7 @@ export function stageDestination(ctx) {
     camera(t) {
       if (t > arriveT - 0.6) {
         const spin = (t - arriveT) * 0.08;
-        return { target: endP, yaw: 0.6 + spin, pitch: 0.82, dist: 210 };
+        return { target: endP, yaw: 0.6 + spin, pitch: 0.7, dist: 200 };
       }
       if (ride && t < walkStart - 0.3) {
         const k = smooth(clamp01((t - 1.4 + 1.2) / rideDur));
