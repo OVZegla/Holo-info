@@ -5,24 +5,40 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-// curl respecte le proxy HTTPS de l'environnement (contrairement à fetch() de Node)
-const ENDPOINTS = (process.env.OVERPASS || 'https://overpass.kumi.systems/api/interpreter,https://overpass-api.de/api/interpreter').split(',');
+// fetch() de Node par défaut (le curl de Windows échoue parfois en TLS/schannel) ;
+// curl seulement si un proxy HTTPS est défini (fetch() de Node ne le respecte pas).
+const ENDPOINTS = (process.env.OVERPASS || 'https://overpass-api.de/api/interpreter,https://overpass.kumi.systems/api/interpreter,https://overpass.private.coffee/api/interpreter,https://maps.mail.ru/osm/tools/overpass/api/interpreter').split(',');
+const UA = 'holo-trajet-poc/0.1 (+https://github.com/OVZegla/Holo-info)';
+const USE_CURL = !!(process.env.HTTPS_PROXY || process.env.https_proxy);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function request(url, q) {
+  if (USE_CURL) {
+    const out = execFileSync('curl', ['-sS', '--fail', '-m', '300', '-A', UA, '--data-urlencode', 'data=' + q, url], { maxBuffer: 512 * 1024 * 1024 });
+    return JSON.parse(out.toString());
+  }
+  const r = await fetch(url, { method: 'POST', headers: { 'User-Agent': UA }, body: new URLSearchParams({ data: q }), signal: AbortSignal.timeout(300000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
 const CITIES = {
   bethune: { name: 'Béthune', bbox: [50.50, 2.60, 50.55, 2.68], radius: 950 },
   lens: { name: 'Lens', bbox: [50.41, 2.80, 50.45, 2.86], radius: 1000 },
   arras: { name: 'Arras', bbox: [50.27, 2.75, 50.31, 2.81], radius: 850 },
-  lille: { name: 'Lille Flandres', bbox: [50.62, 3.05, 50.65, 3.09], radius: 800 },
+  lille: { name: 'Lille[- ]Flandres' /* nom OSM : « Lille-Flandres » */, bbox: [50.62, 3.05, 50.65, 3.09], radius: 800 },
 };
 
 async function overpass(q) {
   let last;
-  for (const url of ENDPOINTS) {
-    for (let attempt = 0; attempt < 3; attempt++) {
+  // Serveurs souvent saturés (429/502/504) : on tourne sur les miroirs avec une attente croissante.
+  for (let round = 0, wait = 10000; round < 5; round++, wait *= 2) {
+    for (const url of ENDPOINTS) {
       try {
-        const out = execFileSync('curl', ['-sS', '--fail', '-m', '300', '-A', 'holo-trajet-poc', '--data-urlencode', 'data=' + q, url], { maxBuffer: 512 * 1024 * 1024 });
-        return JSON.parse(out.toString());
-      } catch (e) { last = e; console.error('échec', url, String(e.message).slice(0, 120)); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000); }
+        return await request(url, q);
+      } catch (e) { last = e; console.error('échec', url, String(e.message).slice(0, 120)); }
     }
+    console.error(`tous les serveurs ont échoué, nouvel essai dans ${wait / 1000} s`);
+    await sleep(wait);
   }
   throw last;
 }
