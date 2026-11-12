@@ -3,8 +3,10 @@
 // Résultat : src/data/osm-<ville>.json (coordonnées en mètres Est/Nord depuis la gare).
 // Données © contributeurs OpenStreetMap, licence ODbL.
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
-const ENDPOINT = process.env.OVERPASS || 'https://overpass-api.de/api/interpreter';
+// curl respecte le proxy HTTPS de l'environnement (contrairement à fetch() de Node)
+const ENDPOINTS = (process.env.OVERPASS || 'https://overpass.kumi.systems/api/interpreter,https://overpass-api.de/api/interpreter').split(',');
 const CITIES = {
   bethune: { name: 'Béthune', bbox: [50.50, 2.60, 50.55, 2.68], radius: 950 },
   lens: { name: 'Lens', bbox: [50.41, 2.80, 50.45, 2.86], radius: 1000 },
@@ -13,9 +15,16 @@ const CITIES = {
 };
 
 async function overpass(q) {
-  const res = await fetch(ENDPOINT, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'holo-trajet-poc' } });
-  if (!res.ok) throw new Error('Overpass ' + res.status);
-  return res.json();
+  let last;
+  for (const url of ENDPOINTS) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const out = execFileSync('curl', ['-sS', '--fail', '-m', '300', '-A', 'holo-trajet-poc', '--data-urlencode', 'data=' + q, url], { maxBuffer: 512 * 1024 * 1024 });
+        return JSON.parse(out.toString());
+      } catch (e) { last = e; console.error('échec', url, String(e.message).slice(0, 120)); execFileSync('sleep', ['5']); }
+    }
+  }
+  throw last;
 }
 
 const only = process.argv[2];
