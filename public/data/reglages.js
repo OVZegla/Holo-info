@@ -24,5 +24,8 @@ window.HOLO_REGLAGES = {
   vitesse: 1.0,          // 0.5 … 2 vitesse globale des animations
   qualite: 'haute',      // 'haute' | 'standard' (ombres et lissage allégés)
   vue: 'isometrique',    // 'isometrique' (maquette, vitrine holographique) | 'perspective'
-  inactiviteSecondes: 120 // retour automatique à l'accueil après inactivité (0 = jamais)
+  inactiviteSecondes: 30, // retour à l'écran de veille (infos, publicités) après N s sans interaction,
+                          // ou N s après la fin de la visualisation ; 0 = jamais
+  camera: true            // webcam : s'approcher de la borne ouvre le choix de destination
+                          // (détection de mouvement locale, aucune image enregistrée)
 };

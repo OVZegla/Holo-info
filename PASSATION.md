@@ -51,6 +51,19 @@
   gares traversées affichées mais non lues à voix haute.
 - Arbres avec tronc, sur les trottoirs, retirés des rues et des bâtiments.
 
+## Écran de veille (12/11)
+- Boucle vidéo plein écran en motion design (sous-projet `motion/`, Remotion 4) : Point info, Cité de Noël,
+  Beffroi (UNESCO), biennale « Les mondes invisibles », Novembre à Béthune, B-Clic / Pass'Jeunes,
+  Béthune Rétro, agenda « Béthune, ça bouge ! ». Uniquement des contenus liés à Béthune, fonds pastel.
+  Rendu : `cd motion` puis `npm run render` → `public/videos/veille.mp4` (≈ 55 s, 1080 × 1920).
+  Aperçu et retouches : `npm run studio`. Textes dans `motion/src/spots.jsx` (relevés le 12/11/2026, à mettre à jour).
+- Photos Wikimedia Commons (licences CC BY-SA, crédits affichés dans la vidéo) : `node tools/fetch-photos.mjs`,
+  détourage local `python tools/cutouts.py` (rembg, modèle isnet-general-use).
+- Remotion : licence gratuite pour les particuliers et entreprises jusqu'à 3 personnes, licence payante au-delà.
+- Webcam : s'approcher (mouvement détecté localement, aucune image enregistrée) ou toucher l'écran ouvre l'accueil.
+  Retour à la veille après 30 s sans interaction (ou 30 s après la fin du trajet), pas tant que quelqu'un bouge devant.
+  Lanceurs : caméra/micro autorisés d'office et voix sans toucher préalable.
+
 ## Reste à faire
 1. Contrôle visuel complet avec `npm run shots` (Playwright requis).
 2. Lille : peu de bâtiments (≈ 2 700) car beaucoup d'îlots du centre sont des multipolygones OSM,

@@ -1,0 +1,17 @@
+{
+  "name": "holo-veille-motion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Boucle d'affichage de veille de la borne (motion design Remotion) : informations de la Ville de Béthune",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx Boucle ../public/videos/veille.mp4 --codec=h264 --crf=20"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.543",
+    "@remotion/transitions": "^4.0.543",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.543"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "beffroi": {
+    "titre": "Beffroi de Béthune (Vue de l'ouest).jpg",
+    "auteur": "JackyM59",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Beffroi_de_B%C3%A9thune_(Vue_de_l%27ouest).jpg"
+  },
+  "grandplace": {
+    "titre": "La Grand Place de Béthune.jpg",
+    "auteur": "JackyM59",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:La_Grand_Place_de_B%C3%A9thune.jpg"
+  },
+  "labanque": {
+    "titre": "Labanque à Béthune.jpg",
+    "auteur": "JackyM59",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Labanque_%C3%A0_B%C3%A9thune.jpg"
+  },
+  "hoteldeville": {
+    "titre": "Hôtel de ville de Béthune.jpg",
+    "auteur": "JackyM59",
+    "licence": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:H%C3%B4tel_de_ville_de_B%C3%A9thune.jpg"
+  },
+  "gare": {
+    "titre": "Béthune - Gare de Béthune (01).JPG",
+    "auteur": "Jérémy-Günther-Heinz Jähnick",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:B%C3%A9thune_-_Gare_de_B%C3%A9thune_(01).JPG"
+  },
+  "noel1": {
+    "titre": "Nord-Pas-de-Calais 2014-12-23 (16210010686).jpg",
+    "auteur": "Guillaume Baviere from Copenhagen, Denmark",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nord-Pas-de-Calais_2014-12-23_(16210010686).jpg"
+  },
+  "noel2": {
+    "titre": "Nord-Pas-de-Calais 2014-12-23 (16238977762).jpg",
+    "auteur": "Guillaume Baviere from Copenhagen, Denmark",
+    "licence": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Nord-Pas-de-Calais_2014-12-23_(16238977762).jpg"
+  }
+}

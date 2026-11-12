@@ -1,3 +1,6 @@
 node_modules/
 scratch/
 *.log
+# boucle de veille : photos originales (motion/tools/fetch-photos.mjs) et rendus de contrôle
+motion/assets/raw/
+motion/out/

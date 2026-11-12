@@ -7,6 +7,7 @@
     <!-- Données modifiables sans recompilation (voir README) -->
     <script src="./data/scenarios.js"></script>
     <script src="./data/reglages.js"></script>
+    <script src="./data/infos.js"></script>
   </head>
   <body>
     <div id="app">
@@ -22,6 +23,20 @@
         </div>
         <button class="clock" id="clock" aria-label="Heure simulée">08:41</button>
       </header>
+
+      <!-- Veille : informations municipales et publicités ; s'approcher ou toucher pour commencer -->
+      <section id="screen-attract" class="screen">
+        <!-- boucle motion design (motion/, Remotion) ; le carrousel ci-dessous sert de secours si la vidéo manque -->
+        <video id="attract-video" src="./videos/veille.mp4" muted loop playsinline preload="auto"></video>
+        <div class="attract-hero" id="attract-start">
+          <span class="attract-chip"><span class="attract-pulse"></span>Point info voyageurs</span>
+          <div class="attract-title">Visualisez votre trajet <b>en 3D</b></div>
+          <div class="attract-sub">Approchez-vous ou touchez l’écran pour choisir votre destination</div>
+        </div>
+        <div class="attract-card" id="attract-card"></div>
+        <div class="attract-dots" id="attract-dots"></div>
+        <div class="attract-ticker"><span class="attract-ticker-label">Infos</span><div class="attract-ticker-track"><span id="attract-ticker-text"></span></div></div>
+      </section>
 
       <!-- Accueil -->
       <section id="screen-home" class="screen">

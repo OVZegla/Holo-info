@@ -11,6 +11,8 @@ import { searchPlaces, norm } from './journey/places.js';
 import { planTo, injectCustom, restoreWorld, hasGtfs } from './journey/planner.js';
 import { speak, stopSpeaking, listen, canListen, canSpeak, setVoiceEnabled, voiceEnabled } from './ui/voice.js';
 import { mountKeyboard } from './ui/keyboard.js';
+import { setupAttract } from './ui/attract.js';
+import { startPresence } from './ui/presence.js';
 
 /* ------------------------------------------------------------------ */
 /*  Données & réglages                                                  */
@@ -18,7 +20,7 @@ import { mountKeyboard } from './ui/keyboard.js';
 const DATA = window.HOLO_DONNEES;
 const DEFAULTS = {
   contraste: 1, exposition: 1, ombres: 0.55, douceurOmbres: 5, opaciteVitrages: 0.28, opaciteMasques: 0.12,
-  contours: 0.55, brume: 0.6, vitesse: 1, qualite: 'haute', inactiviteSecondes: 120, ...(window.HOLO_REGLAGES || {}),
+  contours: 0.55, brume: 0.6, vitesse: 1, qualite: 'haute', inactiviteSecondes: 30, ...(window.HOLO_REGLAGES || {}),
 };
 let settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('holo-reglages') || '{}')); } catch { /* stockage indisponible */ }
@@ -51,7 +53,7 @@ const legOf = () => destOf()?.correspondances[sel.legIdx];
 /* ------------------------------------------------------------------ */
 function show(name) {
   screen = name;
-  for (const id of ['screen-home', 'screen-summary', 'hud', 'screen-end']) $('#' + id).classList.toggle('active', id === (name === 'journey' ? 'hud' : 'screen-' + name));
+  for (const id of ['screen-attract', 'screen-home', 'screen-summary', 'hud', 'screen-end']) $('#' + id).classList.toggle('active', id === (name === 'journey' ? 'hud' : 'screen-' + name));
   if (name === 'end') $('#hud').classList.add('active');
   document.body.dataset.screen = name;
 }
@@ -437,9 +439,12 @@ let lastClock = '';
 engine.onFrame((dt, time) => {
   if (screen === 'journey' || screen === 'end') tickJourney(dt, time);
   else tickHome(dt, time);
-  // inactivité
+  // retour à la veille : après N s sans interaction (30 s par défaut), ou N s après la fin de la
+  // visualisation ; jamais pendant un trajet en cours, ni tant que quelqu'un bouge devant la caméra
   const idle = (performance.now() - lastInput) / 1000;
-  if (!window.__HOLO_TEST__ && settings.inactiviteSecondes > 0 && idle > settings.inactiviteSecondes && screen !== 'home' && !(screen === 'journey' && player.playing)) goHome();
+  const veille = settings.inactiviteSecondes;
+  if (!window.__HOLO_TEST__ && veille > 0 && screen !== 'attract' && idle > veille
+    && !(screen === 'journey' && player.playing) && !presence?.present()) goAttract();
 });
 
 function tickJourney(dt, time) {
@@ -583,9 +588,49 @@ engine.onContextLost = () => {
 setupSettings({ engine, settings, defaults: DEFAULTS, onChange: (s) => { settings = s; } });
 
 /* ------------------------------------------------------------------ */
+/*  Veille (infos municipales, publicités) et détection de présence     */
+/* ------------------------------------------------------------------ */
+const attract = setupAttract($('#screen-attract'), window.HOLO_INFOS);
+let presence = null;
+// boucle vidéo motion design (dist/videos/veille.mp4) ; carrousel HTML de secours si elle manque
+const video = $('#attract-video');
+let hasVideo = false;
+const onVideo = () => { hasVideo = true; attract.stop(); $('#screen-attract').classList.add('has-video'); document.body.classList.add('attract-video'); };
+// la vidéo a pu finir de charger avant ce script : on vérifie son état en plus de l'événement
+if (video.readyState >= 2) onVideo(); else video.addEventListener('loadeddata', onVideo, { once: true });
+video.addEventListener('error', () => { hasVideo = false; video.remove(); });
+
+function goAttract() {
+  if (screen !== 'home') goHome();
+  stopSpeaking();
+  closeKeyboard();
+  $('#screen-attract').classList.remove('leaving');
+  show('attract');
+  if (video.isConnected) video.play().catch(() => {});
+  if (!hasVideo) attract.start();
+}
+
+function leaveAttract({ greet = true } = {}) {
+  if (screen !== 'attract') return;
+  attract.stop();
+  lastInput = performance.now();
+  // la vidéo s'efface en s'éloignant pendant que l'accueil apparaît, puis se met en pause
+  $('#screen-attract').classList.add('leaving');
+  setTimeout(() => { if (screen !== 'attract') video.pause(); }, 800);
+  show('home');
+  if (greet) speak('Bonjour ! Où souhaitez-vous aller ? Touchez le champ de recherche ou dictez votre destination.');
+}
+
+$('#screen-attract').addEventListener('pointerdown', (e) => { e.preventDefault(); leaveAttract(); });
+if (settings.camera !== false) {
+  startPresence({ onArrive: () => { if (screen === 'attract') leaveAttract(); } }).then((p) => { presence = p; });
+}
+
+/* ------------------------------------------------------------------ */
 /*  Démarrage                                                          */
 /* ------------------------------------------------------------------ */
 goHome();
+if (!window.__HOLO_TEST__ && settings.inactiviteSecondes > 0) goAttract();
 tickHome(0, 0);
 engine.rig.snap();
 engine.start();

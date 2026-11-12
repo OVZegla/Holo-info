@@ -12,7 +12,7 @@ const SCHEMA = [
   { k: 'contours', label: 'Arêtes « maquette »', min: 0, max: 1, step: 0.05 },
   { k: 'brume', label: 'Profondeur (brume)', min: 0, max: 1, step: 0.05 },
   { k: 'vitesse', label: 'Vitesse des animations', min: 0.5, max: 2, step: 0.1 },
-  { k: 'inactiviteSecondes', label: 'Retour accueil (s, 0 = jamais)', min: 0, max: 600, step: 10 },
+  { k: 'inactiviteSecondes', label: 'Retour à la veille (s, 0 = jamais)', min: 0, max: 600, step: 10 },
 ];
 
 export function setupSettings({ engine, settings, defaults, onChange }) {
