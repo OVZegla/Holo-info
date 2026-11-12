@@ -277,8 +277,9 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
       const nx = -(bz - az) / len, nz = (bx - ax) / len;
       for (let d = 6; d < len - 6; d += s.trees === 'sparse' ? 24 : 11) {
         for (const side of [-1, 1]) {
-          const px = ax + ((bx - ax) * d) / len + nx * side * (s.w / 2 - 1.2);
-          const pz = az + ((bz - az) * d) / len + nz * side * (s.w / 2 - 1.2);
+          // sur le trottoir, au-delà de la chaussée et de sa marge (pas sur la route)
+          const px = ax + ((bx - ax) * d) / len + nx * side * (s.w / 2 + 2.5);
+          const pz = az + ((bz - az) * d) / len + nz * side * (s.w / 2 + 2.5);
           treesAt.push([px, pz, 0.75]);
         }
       }
@@ -349,6 +350,7 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
         }
         count++;
         b.built = true;
+        grid.fillPoly(poly, 2); // les arbres ne poussent pas dans les bâtiments
       } catch { /* polygone dégénéré */ }
     }
   }
@@ -358,18 +360,22 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
   if (facGeosB.length) g.add(mesh(mergeGeometries(facGeosB), 'facade2', { edgeAngle: 35, edgeOpacity: 0.75 }));
 
   /* ---- arbres (instanciés) ---- */
-  if (treesAt.length) {
-    const geo = new THREE.IcosahedronGeometry(1, 1);
-    const im = new THREE.InstancedMesh(geo, palette.get('tree', { flat: true }), treesAt.length);
-    const m4 = new THREE.Matrix4();
-    treesAt.forEach(([x, z, s], i) => {
-      m4.compose(new THREE.Vector3(x, y + 3.4 * s + 1.2, z), new THREE.Quaternion(), new THREE.Vector3(2.4 * s, 2.2 * s, 2.4 * s));
-      im.setMatrixAt(i, m4);
+  // on retire les arbres tombés sur une rue, un bâtiment ou un monument (grille 2 ou 4 ; 3 = parc/place : gardés)
+  const trees = treesAt.filter(([x, z]) => { const v = grid.get(x, z); return v === 0 || v === 3; });
+  treesAt.length = 0;
+  if (trees.length) {
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+    // feuillage posé sur un tronc (et non une boule flottante)
+    const crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), palette.get('tree', { flat: true }), trees.length);
+    const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.26, 1, 6), palette.get('detail'), trees.length);
+    trees.forEach(([x, z, s], i) => {
+      const th = 2.2 * s + 0.6; // hauteur du tronc jusqu'au bas du feuillage
+      m4.compose(new THREE.Vector3(x, y + th / 2, z), q, new THREE.Vector3(s, th, s));
+      trunk.setMatrixAt(i, m4);
+      m4.compose(new THREE.Vector3(x, y + th + 1.7 * s, z), q, new THREE.Vector3(2.3 * s, 2.1 * s, 2.3 * s));
+      crown.setMatrixAt(i, m4);
     });
-    im.castShadow = true;
-    im.receiveShadow = true;
-    g.add(im);
-    treesAt.length = 0;
+    for (const im of [crown, trunk]) { im.castShadow = true; im.receiveShadow = true; g.add(im); }
   }
 
   return { group: g, frame, T, labels, pois, landmarks: landmarkObjs, occluders: occ, buildings: count, streets, graph: plan.graph || null, groundY: y };

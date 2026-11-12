@@ -23,5 +23,6 @@ window.HOLO_REGLAGES = {
   brume: 0.6,            // 0 … 1 profondeur atmosphérique (fondu vers le blanc)
   vitesse: 1.0,          // 0.5 … 2 vitesse globale des animations
   qualite: 'haute',      // 'haute' | 'standard' (ombres et lissage allégés)
+  vue: 'isometrique',    // 'isometrique' (maquette, vitrine holographique) | 'perspective'
   inactiviteSecondes: 120 // retour automatique à l'accueil après inactivité (0 = jamais)
 };

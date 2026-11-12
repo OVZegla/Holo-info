@@ -6,9 +6,15 @@ const BG = new THREE.Color('#f4f7f9');
 /* ------------------------------------------------------------------ */
 /*  Caméra « rig » : cible, cap, inclinaison, distance — lissés         */
 /* ------------------------------------------------------------------ */
+// Vue isométrique (projection orthographique) : la ville apparaît comme une maquette
+// posée dans la vitrine holographique ; inclinaison fixe proche de l'isométrie vraie (35°).
+export const ISO_PITCH = 0.62;
+const ISO_BACK = 4000; // recul de la caméra orthographique (n'influe pas sur la taille à l'écran)
+
 export class CameraRig {
   constructor(camera) {
     this.camera = camera;
+    this.aspect = 1;
     this.cur = { target: new THREE.Vector3(), yaw: 0, pitch: 0.9, dist: 60, fov: 36 };
     this.want = { target: new THREE.Vector3(), yaw: 0, pitch: 0.9, dist: 60, fov: 36 };
     this.stiffness = 2.0;
@@ -35,8 +41,24 @@ export class CameraRig {
     this.apply();
   }
   apply() {
-    const { target, yaw, pitch, dist, fov } = this.cur;
+    const { target, yaw, dist, fov } = this.cur;
+    let { pitch } = this.cur;
     const c = this.camera;
+    if (c.isOrthographicCamera) {
+      // même cadrage qu'en perspective à la distance « dist » : demi-hauteur = dist · tan(fov/2)
+      pitch = ISO_PITCH;
+      const halfH = dist * Math.tan((fov * Math.PI) / 360);
+      const halfW = halfH * this.aspect;
+      if (c.top !== halfH || c.right !== halfW) { c.left = -halfW; c.right = halfW; c.top = halfH; c.bottom = -halfH; c.updateProjectionMatrix(); }
+      c.userData.extraBack = ISO_BACK - dist;
+      c.position.set(
+        target.x + Math.sin(yaw) * Math.cos(pitch) * ISO_BACK,
+        target.y + Math.sin(pitch) * ISO_BACK,
+        target.z + Math.cos(yaw) * Math.cos(pitch) * ISO_BACK,
+      );
+      c.lookAt(target);
+      return;
+    }
     c.position.set(
       target.x + Math.sin(yaw) * Math.cos(pitch) * dist,
       target.y + Math.sin(pitch) * dist,
@@ -72,7 +94,8 @@ export class LabelLayer {
     for (const it of this.items) {
       const p = this.v;
       if (it.obj) { it.obj.getWorldPosition(p); p.add(it.offset); } else p.copy(it.pos);
-      const dist = p.distanceTo(camera.position);
+      // en isométrique la caméra est reculée loin : on mesure depuis le cadre visé
+      const dist = p.distanceTo(camera.position) - (camera.userData.extraBack || 0);
       p.project(camera);
       const on = it.visible && p.z < 1 && p.z > -1 && Math.abs(p.x) < 1.15 && Math.abs(p.y) < 1.15 && dist < it.maxDist && dist > it.minDist;
       if (!on) { if (!it.el.classList.contains('hidden')) it.el.classList.add('hidden'); continue; }
@@ -112,7 +135,8 @@ export class Engine {
     this.scene.background = BG.clone();
     this.scene.fog = new THREE.Fog(BG.clone(), 100, 600);
 
-    this.camera = new THREE.PerspectiveCamera(36, 1, 0.5, 12000);
+    this.iso = (settings.vue || 'isometrique') !== 'perspective';
+    this.camera = this.iso ? new THREE.OrthographicCamera(-1, 1, 1, -1, 10, 20000) : new THREE.PerspectiveCamera(36, 1, 0.5, 12000);
     this.rig = new CameraRig(this.camera);
     this.labels = new LabelLayer(labelsEl);
 
@@ -161,6 +185,7 @@ export class Engine {
     this.w = w; this.h = h;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    if (this.rig) { this.rig.aspect = w / h; this.rig.camera.top = 0; } // recalcul du cadre orthographique
     this.setViewShift(this.viewShift || 0);
   }
 
@@ -278,8 +303,9 @@ export class Engine {
   _updateFog() {
     const d = this.rig.cur.dist;
     const b = THREE.MathUtils.clamp(this.settings.brume, 0, 1);
-    this.scene.fog.near = d * (0.95 + (1 - b) * 0.8);
-    this.scene.fog.far = d * (2.4 + (1 - b) * 7);
+    const extra = this.camera.userData.extraBack || 0; // recul de la caméra isométrique
+    this.scene.fog.near = extra + d * (0.95 + (1 - b) * 0.8);
+    this.scene.fog.far = extra + d * (2.4 + (1 - b) * 7);
   }
 
   start() {

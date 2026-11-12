@@ -467,7 +467,7 @@ function tickJourney(dt, time) {
     $('#ins-text').textContent = c.text;
     $('#ins-sub').textContent = c.sub || '';
     $('#ins-count').textContent = `${ci + 1} / ${st.cues.length}`;
-    if (player.playing) speak(c.sub ? `${c.text}. ${c.sub}` : c.text);
+    if (player.playing && !c.silent) speak(c.sub ? `${c.text}. ${c.sub}` : c.text);
     const el = $('#instruction');
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
   }

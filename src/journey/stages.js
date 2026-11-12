@@ -39,7 +39,7 @@ const cityWalkSpeed = (len) => Math.max(10, len / 40);
  * Caméra de suivi « trois-quarts arrière » : derrière le voyageur, un peu au-dessus,
  * cap lissé sur ±35 m de trajet pour ne pas tourner à chaque coin de rue.
  */
-function followCam(route, d, { pitch = 0.6, dist = 150, ahead = 8 } = {}) {
+function followCam(route, d, { pitch = 0.6, dist = 210, ahead = 8 } = {}) {
   const p = route.posAt(d);
   const h = route.posAt(Math.min(route.length, d + 35)).sub(route.posAt(Math.max(0, d - 20)));
   h.y = 0;
@@ -223,7 +223,7 @@ export function stageTrain(ctx) {
   const cues = [{ t: 0, text: 'Votre train relie les villes', sub: 'Trajet accéléré pour la démonstration' }];
   for (let i = 1; i < names.length; i++) {
     const k = keys.find((kk) => kk.i === stopIdx[i] && kk.move);
-    if (i < names.length - 1) cues.push({ t: k.t - 0.6, text: `Gare ${/^[aeiouyhéèêâîôûœ]/i.test(names[i]) ? 'd’' : 'de '}${names[i]}`, sub: `${fmt(times[i])} · restez à bord` });
+    if (i < names.length - 1) cues.push({ t: k.t - 0.6, text: `Gare ${/^[aeiouyhéèêâîôûœ]/i.test(names[i]) ? 'd’' : 'de '}${names[i]}`, sub: `${fmt(times[i])} · restez à bord`, silent: true }); // affichée, pas lue
     else cues.push({ t: k.t - 0.6, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · descendez du train` });
   }
   cues.splice(1, 0, { t: intro - 0.4, text: `Départ de Béthune à ${T.depart}`, sub: `${T.numero} · direction ${T.direction}` });
@@ -409,7 +409,7 @@ export function stageArrival(ctx) {
       const p = smoothPos(route, w.dist, t);
       const under = p.y < -1.5 ? 1 : 0;
       // dehors, au-delà du parvis : suivi trois-quarts arrière dans la rue
-      if (Math.hypot(p.x, p.z - 24) > 35 && (p.z > 20 || Math.abs(p.x) > 110)) return followCam(route, w.dist(t + 0.4), { dist: 120, ahead: 25 });
+      if (Math.hypot(p.x, p.z - 24) > 35 && (p.z > 20 || Math.abs(p.x) > 110)) return followCam(route, w.dist(t + 0.4), { dist: 180, ahead: 15 });
       const outside = p.z > 20 ? 1 : 0;
       const yaw = isTerminus ? (p.z > 16 ? 0.4 : Math.PI - 0.45) : (outside ? 0.25 : 0.35 + under * 0.15);
       return { target: p, yaw, pitch: 0.78 + under * 0.15, dist: (isTerminus ? 80 : 72) - under * 10 + outside * 14 };
@@ -525,7 +525,7 @@ export function stageDestination(ctx) {
       if (ride && t < walkStart - 0.3) {
         // derrière le véhicule, un peu plus haut et plus loin (il va plus vite)
         const k = smooth(clamp01((t - 1.4 + 0.6) / rideDur));
-        return followCam(ride.route, ride.route.length * k, { pitch: 0.65, dist: 220, ahead: 50 });
+        return followCam(ride.route, ride.route.length * k, { pitch: 0.65, dist: 300, ahead: 50 });
       }
       return followCam(walk.route, walk.dist(t + 0.4));
     },

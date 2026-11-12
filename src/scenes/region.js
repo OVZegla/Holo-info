@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { palette } from '../core/materials.js';
 import { mesh, block } from '../core/build.js';
 import { rng } from './city.js';
+import { getOsm } from './osm.js';
 import { beffroiBethune, beffroiArras, beffroiLille, tourDeLille, stadeBollaert } from './landmarks.js';
 
 /*
@@ -97,31 +98,26 @@ export function buildRegion() {
     g.add(new THREE.Mesh(lineGeo(c.getPoints(60), 1.6, 0.06), palette.get('water')));
   }
 
-  // grandes zones urbaines (taches claires) + petits volumes
-  const blockGeos = [];
+  // villes : vrai bâti OSM en miniature pour les 4 gares, petits bourgs pour les autres
+  const blockGeos = [], roadGeos = [];
+  const OSM_ID = { 'Béthune': 'bethune', 'Lens': 'lens', 'Arras': 'arras', 'Lille': 'lille' };
   for (const name of Object.keys(STATIONS)) {
     const [x, z] = STATIONS[name];
-    const major = MAJOR.includes(name) || name === 'Lille-Flandres';
-    if (name === 'Lille-Flandres') continue;
-    const rad = name === 'Lille' ? 34 : major ? 18 : 8;
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(rad, 40).rotateX(-Math.PI / 2), palette.get('socle'));
-    disc.position.set(x, 0.05, z);
-    disc.receiveShadow = true;
-    g.add(disc);
-    const n = name === 'Lille' ? 140 : major ? 55 : 14;
-    for (let i = 0; i < n; i++) {
-      const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * rad * 0.85;
-      const bx = x + Math.cos(a) * d, bz = z + Math.sin(a) * d;
-      const h = (name === 'Lille' ? 1.2 : 0.7) + rand() * (name === 'Lille' ? 2.6 : 1.2) * (1 - d / rad);
-      const s = 1.2 + rand() * 2.2;
-      const geo = new THREE.BoxGeometry(s, h, s * (0.6 + rand() * 0.8));
-      geo.rotateY(rand() * Math.PI);
-      geo.translate(bx, h / 2 + 0.05, bz);
-      blockGeos.push(geo);
-    }
+    const major = MAJOR.includes(name);
+    if (name === 'Lille-Flandres' || name === 'Lille Flandres') continue;
+    const osm = OSM_ID[name] && getOsm(OSM_ID[name]);
+    if (osm) miniCity(osm, blockGeos, roadGeos);
+    // pas de bourg sur une grande ville (gares « Lille Porte de Douai », « Lille CHR »…)
+    else if (!MAJOR.some((m) => Math.hypot(STATIONS[m][0] - x, STATIONS[m][1] - z) < 26)) smallTown(x, z, rand, blockGeos, roadGeos);
+    else continue;
     labels.push({ name, at: [x, z], major });
   }
-  g.add(mesh(mergeGeometries(blockGeos), 'facade', { edgeAngle: 40, edgeOpacity: 0.5 }));
+  g.add(mesh(mergeGeometries(blockGeos), 'facade', { edgeAngle: 40, edgeOpacity: 0.35 }));
+  if (roadGeos.length) {
+    const roads = new THREE.Mesh(mergeGeometries(roadGeos), palette.get('road'));
+    roads.receiveShadow = true;
+    g.add(roads);
+  }
 
   // monuments miniatures (échelle exagérée pour la lisibilité)
   const mini = (fn, at, s, dx = 0, dz = 0) => { const o = fn(); o.scale.setScalar(s); o.position.set(at[0] + dx, 0.05, at[1] + dz); g.add(o); return o; };
@@ -148,6 +144,69 @@ export function buildRegion() {
   g.add(net);
 
   return { group: g, labels };
+}
+
+/**
+ * Ville en miniature (1 unité = 100 m) à partir des emprises OSM :
+ * bâtiments extrudés (hauteur ×2,5 pour la lisibilité) et grands axes.
+ */
+function miniCity(osm, blockGeos, roadGeos) {
+  const { lat, lon } = osm.station;
+  const [sx, sz] = P(lon, lat);
+  const kx = 710 / (111320 * Math.cos((lat * Math.PI) / 180)), kz = 1112 / 110540;
+  const toMap = ([E, N]) => [sx + E * kx, sz - N * kz];
+  const area = (p) => { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] + p[i][0]) * (p[j][1] - p[i][1]); return Math.abs(a / 2); };
+  for (const b of osm.buildings) {
+    if (b.p.length < 4 || area(b.p) < 140) continue; // trop petit à cette échelle
+    const pts = b.p.map(toMap);
+    const h = Math.max(0.12, ((b.h || 9) / 100) * 2.5);
+    try {
+      const shape = new THREE.Shape(pts.map(([px, pz]) => new THREE.Vector2(px, -pz)));
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2);
+      geo.translate(0, 0.05, 0);
+      blockGeos.push(geo);
+    } catch { /* polygone dégénéré */ }
+  }
+  const W = { trunk: 0.22, primary: 0.2, secondary: 0.16, tertiary: 0.12 };
+  for (const r of osm.roads) {
+    const w = W[r.k];
+    if (!w) continue;
+    const pts = r.p.map(toMap);
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+      const len = Math.hypot(bx - ax, bz - az);
+      if (len < 1e-3) continue;
+      const gg = new THREE.BoxGeometry(len + w, 0.02, w);
+      gg.rotateY(-Math.atan2(bz - az, bx - ax));
+      gg.translate((ax + bx) / 2, 0.06, (az + bz) / 2);
+      roadGeos.push(gg);
+    }
+  }
+}
+
+/** Petit bourg : maisons alignées le long d'une rue et d'une transversale. */
+function smallTown(x, z, rand, blockGeos, roadGeos) {
+  const a = rand() * Math.PI;
+  const u = [Math.cos(a), Math.sin(a)], v = [-u[1], u[0]];
+  for (const [dir, L] of [[u, 9], [v, 5]]) {
+    const gg = new THREE.BoxGeometry(L * 2, 0.02, 0.16);
+    gg.rotateY(-Math.atan2(dir[1], dir[0]));
+    gg.translate(x, 0.06, z);
+    roadGeos.push(gg);
+    for (let d = -L + 0.8; d < L - 0.5; d += 1.1 + rand() * 0.5) {
+      for (const side of [-1, 1]) {
+        if (rand() < 0.2) continue;
+        const n = dir === u ? v : u;
+        const bx = x + dir[0] * d + n[0] * side * 0.6, bz = z + dir[1] * d + n[1] * side * 0.6;
+        const w = 0.5 + rand() * 0.4, dd = 0.5 + rand() * 0.3, h = 0.25 + rand() * 0.25;
+        const geo = new THREE.BoxGeometry(w, h, dd);
+        geo.rotateY(-Math.atan2(dir[1], dir[0]));
+        geo.translate(bx, h / 2 + 0.05, bz);
+        blockGeos.push(geo.toNonIndexed()); // même format que les bâtiments extrudés (fusion)
+      }
+    }
+  }
 }
 
 /**

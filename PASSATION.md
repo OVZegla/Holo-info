@@ -45,6 +45,11 @@
 - Rendu : noms de rues OSM (visibles près de la caméra), train sans arrêt aux gares intermédiaires,
   marches à vitesse constante (10 m/s à l'écran, 40 s max), caméra de suivi « trois-quarts arrière ».
 - Borne à taille humaine : panneaux réduits et à mi-hauteur, commandes du guidage à 30 % du bas.
+- Vue isométrique (caméra orthographique, inclinaison 35°) pour la vitrine LCD transparente ;
+  `vue: 'perspective'` dans data/reglages.js pour revenir à l'ancienne vue.
+- Carte du train : vrai bâti OSM en miniature pour les 4 villes, bourgs alignés pour les autres gares ;
+  gares traversées affichées mais non lues à voix haute.
+- Arbres avec tronc, sur les trottoirs, retirés des rues et des bâtiments.
 
 ## Reste à faire
 1. Contrôle visuel complet avec `npm run shots` (Playwright requis).
