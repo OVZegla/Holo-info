@@ -90,9 +90,18 @@ export class Engine {
   constructor(container, labelsEl, settings) {
     this.container = container;
     this.settings = settings;
-    const quality = settings.qualite === 'standard' ? 'standard' : 'haute';
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!window.__HOLO_TEST__ });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === 'haute' ? 2 : 1.25));
+    // Appareils mobiles / peu de mémoire : qualité allégée automatiquement (évite la saturation GPU)
+    const ua = navigator.userAgent || '';
+    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+    const lowMem = (navigator.deviceMemory || 8) <= 4;
+    this.light = mobile || lowMem;
+    const quality = settings.qualite === 'standard' || this.light ? 'standard' : 'haute';
+    this.quality = quality;
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: this.light ? 'default' : 'high-performance', preserveDrawingBuffer: !!window.__HOLO_TEST__ });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality === 'haute' ? 1.5 : 1));
+    this.contextLost = false;
+    this.renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.contextLost = true; if (this.onContextLost) this.onContextLost(); });
+    this.renderer.domElement.addEventListener('webglcontextrestored', () => { location.reload(); });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.NeutralToneMapping;
@@ -113,7 +122,7 @@ export class Engine {
     this.sun = new THREE.DirectionalLight('#ffffff', 2.0);
     this.sunDir = new THREE.Vector3(-0.55, 1.0, 0.42).normalize();
     this.sun.castShadow = true;
-    const ms = quality === 'haute' ? 4096 : 2048;
+    const ms = quality === 'haute' ? 3072 : this.light ? 1024 : 2048;
     this.sun.shadow.mapSize.set(ms, ms);
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.04;
@@ -288,6 +297,7 @@ export class Engine {
   }
 
   step(dt) {
+    if (this.contextLost) return;
     this.time += dt;
     for (const cb of this.frameCbs) cb(dt, this.time);
     this.rig.update(dt);

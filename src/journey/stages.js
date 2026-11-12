@@ -220,7 +220,7 @@ export function stageTrain(ctx) {
   for (let i = 1; i < names.length; i++) {
     const k = keys.find((kk) => kk.i === stopIdx[i] && kk.move);
     if (i < names.length - 1) cues.push({ t: k.t - 0.6, text: `Arrêt : ${names[i]}`, sub: `${fmt(times[i])} · restez à bord` });
-    else cues.push({ t: k.t - 0.6, text: `Arrivée à ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · descendez du train` });
+    else cues.push({ t: k.t - 0.6, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · descendez du train` });
   }
   cues.splice(1, 0, { t: intro - 0.4, text: `Départ de Béthune à ${T.depart}`, sub: `${T.numero} · direction ${T.direction}` });
 
@@ -352,7 +352,7 @@ export function stageArrival(ctx) {
   if (poi) labels.push({ html: leg.nomPoint, cls: 'accent', pos: V(poi.x, gy + 4, poi.z) });
   labels.push({ html: `Quai ${quai}`, cls: '', pos: doorPos.clone().add(V(0, 3.2, 0)) });
 
-  const cues = [{ t: 0, text: `Arrivée à ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · quai ${quai}` }, ...route.cues(walkStart)];
+  const cues = [{ t: 0, text: `Arrivée : ${data.gares[city.id].nomComplet}`, sub: `${T.arrivee} · quai ${quai}` }, ...route.cues(walkStart)];
   if (vehicle) cues.push({ t: vStart + vDur + 0.2, text: 'Montez à bord', sub: leg.mode === 'bus' ? `Ligne ${leg.ligne} · direction ${leg.direction}` : `${leg.vehicule}` });
 
   const arrMin = toMin(T.arrivee);

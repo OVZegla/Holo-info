@@ -14,6 +14,20 @@ import { facadeBethune, facadeLens, facadeArras, abribus, poteauDepose } from '.
 const FACADES = { bethune: facadeBethune, lens: facadeLens, arras: facadeArras };
 const cache = new Map();
 
+/** Libère les mondes qui ne sont pas dans la liste « keep » (mémoire GPU). */
+export function releaseWorlds(keep) {
+  for (const [id, w] of cache) {
+    if (keep.includes(id)) continue;
+    w.group.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of mats) if (m.userData?.owned) m.dispose();
+    });
+    for (const e of w.occEntries || []) for (const m of e.mats) m.dispose();
+    cache.delete(id);
+  }
+}
+
 export function getWorld(id, engine) {
   if (cache.has(id)) return cache.get(id);
   const w = id === 'region' ? buildRegionWorld() : buildStationWorld(id);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import './styles.css';
 import { Engine } from './core/engine.js';
-import { getWorld } from './journey/worlds.js';
+import { getWorld, releaseWorlds } from './journey/worlds.js';
 import { stageDeparture, stageTrain, stageArrival, stageDestination } from './journey/stages.js';
 import { computeTrip } from './journey/trip.js';
 import { toMin, fmt, fmtDur } from './journey/time.js';
@@ -143,8 +143,17 @@ async function enterStage(i, { snap = false } = {}) {
   const worldId = i === 0 ? 'bethune' : i === 1 ? 'region' : ctx.city.id;
   const changeWorld = worldId !== player.worldId;
   if (changeWorld && player.worldId) await fade(true);
-  const world = getWorld(worldId, engine);
-  const stage = fac({ ...ctx, world });
+  let world, stage;
+  try {
+    world = getWorld(worldId, engine);
+    stage = fac({ ...ctx, world });
+  } catch (err) {
+    console.error('[Étape]', err);
+    player.busy = false;
+    await fade(false);
+    goHome();
+    return;
+  }
   disposeStage(player.stage);
   engine.clearWorld();
   engine.world.add(world.group, stage.group);
@@ -162,6 +171,7 @@ async function enterStage(i, { snap = false } = {}) {
     player.labels.push({ it, spec: l });
   }
   player.stage = stage;
+  lastInput = performance.now(); // l'inactivité se compte à partir de la dernière étape vue
   player.idx = i;
   player.t = 0;
   player.cueIdx = -1;
@@ -197,6 +207,7 @@ function setPlaying(p) {
 async function startJourney() {
   const city = cityOf(sel.cityId), dest = destOf(), leg = legOf();
   player.ctx = { data: DATA, city, dest, leg, stepFree: sel.stepFree };
+  releaseWorlds(['bethune', 'region', city.id]);
   player.overview = false;
   $('#ctl-overview').classList.remove('active');
   await fade(true);
@@ -223,6 +234,7 @@ function showEnd() {
     </div>
     <p class="det" style="font-size:calc(var(--u)*2.5);color:var(--text-2);margin:0 0 calc(var(--u)*3);line-height:1.4">
       ${DATA.gares.bethune.nom} → ${DATA.gares[city.id].nomComplet} en ${dest.train.numero}, puis ${legTxt} jusqu’à ${dest.nom}.</p>`;
+  lastInput = performance.now();
   $('#screen-end').classList.add('active');
   document.body.dataset.screen = 'end';
   screen = 'end';
@@ -304,11 +316,11 @@ function goHome() {
   player.idx = -1;
   player.worldId = 'bethune';
   const w = getWorld('bethune', engine);
+  if (engine.light) releaseWorlds(['bethune']);
   engine.clearWorld();
   engine.world.add(w.group);
   engine.occluders = w.occEntries;
   for (const l of w.labels) engine.labels.add({ html: l.text, cls: l.cls, pos: new THREE.Vector3(l.at[0], (l.y || 0) + l.h, l.at[1]), maxDist: 4000 });
-  engine.labels.add({ html: 'Vous êtes ici · Gare de Béthune', cls: 'accent big', pos: new THREE.Vector3(-6, 16, 15), maxDist: 4000 });
   $('#clock').textContent = DATA.borne.heure;
   $('#brand-sub').textContent = DATA.gares[DATA.borne.gare].nomComplet;
   lastClock = '';
@@ -358,6 +370,14 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'ArrowLeft') $('#ctl-prev').click();
 });
 document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+if (engine.light) document.body.classList.add('light');
+engine.onContextLost = () => {
+  const f = $('#fade');
+  f.classList.add('on');
+  f.innerHTML = '<p style="position:absolute;top:45%;width:100%;text-align:center;font-size:calc(var(--u)*3);color:#5b6876">Rechargement de l’affichage 3D…</p>';
+  setTimeout(() => location.reload(), 2500);
+};
 
 setupSettings({ engine, settings, defaults: DEFAULTS, onChange: (s) => { settings = s; } });
 
