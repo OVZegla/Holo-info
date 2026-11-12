@@ -503,8 +503,12 @@ export function stageDestination(ctx) {
     },
     overview: (() => {
       const s = (ride ? ride.route : walk.route).posAt(0);
-      const c = s.clone().add(endP).multiplyScalar(0.5);
-      return { target: c, yaw: 0.3, pitch: 1.05, dist: Math.max(380, s.distanceTo(endP) * 1.9) };
+      // centre un peu côté destination : son libellé passe sous le bandeau du haut sinon
+      const c = s.clone().lerp(endP, 0.56);
+      // trajet dans l'axe vertical de l'écran (borne en portrait) : départ en bas, destination en haut
+      const dir = endP.clone().sub(s);
+      const yaw = dir.lengthSq() > 100 ? Math.atan2(-dir.x, -dir.z) : 0.3;
+      return { target: c, yaw, pitch: 1.05, dist: Math.max(380, s.distanceTo(endP) * 2.3) };
     })(),
     focus(t) { return t > walkStart - 0.3 ? walk.pos(t) : null; },
     clock(t) {

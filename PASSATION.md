@@ -9,15 +9,20 @@
 - Intégration OpenStreetMap **prête mais inactive** : elle s'active dès que les fichiers
   `src/data/osm-<ville>.json` existent (src/scenes/osm.js, appelé dans src/journey/worlds.js).
 
+## Fait en local (12/11)
+- Données OSM des 4 gares dans `src/data/osm-*.json` (`npm run osm` ; fetch() de Node, 4 miroirs Overpass).
+- Orientation réelle mesurée sur les voies OSM : écart avec `facadeBearing` de +14° (Béthune), +55° (Lens),
+  +32° (Arras), −5° (Lille). Monuments, lieux d'arrivée et itinéraires placés à la main sont reportés
+  dans ce repère (`remapToOsmFrame`, src/scenes/osm.js) ; le parvis modélisé ne bouge pas.
+- Recalage par nom limité à 200 m (`osmMax` pour l'élargir), repli sur les rues piétonnes nommées.
+  Non trouvés dans OSM (restent à leur position estimée) : beffroi de Béthune, stade Bollaert (hors zone),
+  Opéra, Chambre de commerce, Vieille Bourse et Hôtel de Ville de Lille, cathédrale d'Arras (hors zone).
+- Itinéraires recalculés sur le plus grand réseau connexe : aucun trajet ne traverse un bâtiment.
+- Vue d'ensemble de la destination orientée départ → arrivée (écran portrait).
+- Mention « plan © contributeurs OpenStreetMap » affichée en pied de page.
+
 ## Reste à faire
-1. Télécharger les données OSM depuis le poste local : `npm run osm`
-   (le réseau cloud bloquait tous les serveurs OSM). Le script essaie overpass.kumi.systems
-   puis overpass-api.de ; une ville seule : `npm run osm -- lille`.
-2. `npm run dev`, vérifier chaque ville avec les vraies données :
-   - alignement des voies OSM sur la gare modélisée (osmFrame dans src/scenes/osm.js),
-   - recalage des monuments par nom (champ `osm` des landmarks dans src/scenes/cityPlans.js),
-   - itinéraires bus / voiture / piéton calculés sur les rues réelles (rerouteOnOsm dans worlds.js),
-   - absence de bâtiments OSM qui recouvrent la gare, les places ou les monuments modélisés.
-3. Ajouter la mention « © contributeurs OpenStreetMap » dans `#osm-credit` (index.html) quand les données sont utilisées.
-4. `npm run build`, contrôler `npm run shots`, puis commiter les JSON (moins de 20 Mo chacun).
-5. Essais sur la borne (TESTS.md, section « À vérifier sur la borne »).
+1. Contrôle visuel complet avec `npm run shots` (Playwright requis).
+2. Lille : peu de bâtiments (≈ 2 700) car beaucoup d'îlots du centre sont des multipolygones OSM,
+   non importés par le script (seulement les `way`).
+3. Essais sur la borne (TESTS.md, section « À vérifier sur la borne »).

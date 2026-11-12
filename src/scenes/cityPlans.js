@@ -118,7 +118,7 @@ function lens() {
       ...grid({ x0: -900, x1: 600, z0: -880, z1: -140, step: 110, stepZ: 70, angle: 20, w: 8, skip: insideRect([stade[0] - 160, stade[1] - 140, stade[0] + 160, stade[1] + 140]) }),
     ],
     landmarks: [
-      { type: 'stadeBollaert', at: stade, rot: 20, label: 'Stade Bollaert-Delelis', id: 'stade', osm: 'bollaert' },
+      { type: 'stadeBollaert', at: stade, rot: 20, label: 'Stade Bollaert-Delelis', id: 'stade', osm: '^stade.*bollaert' },
       { type: 'pavillon', at: pavillon, rot: 200, params: { w: 34, d: 24, h: 10, name: 'Pavillon des Rencontres' }, id: 'bollaert-dest', anchor: 'stade' },
     ],
     reserve: [[-95, -30, 95, 26]],
@@ -179,7 +179,7 @@ function arras() {
       { type: 'beffroiArras', at: beff, rot: 110 + 90, label: 'Beffroi d’Arras', id: 'beffroi', osm: 'beffroi' },
       { type: 'hotelDeVilleArras', at: [beff[0] + 0.94 * -2 + 0.342 * 8, beff[1] + 0.94 * 8], rot: 110 + 90, anchor: 'beffroi' },
       { type: 'placeArras', at: heros, rot: 110, params: { w: 112, d: 64, seed: 7, skipSides: ['w'] }, id: 'heros', osm: 'h[ée]ros' },
-      { type: 'placeArras', at: grand, rot: 110, params: { w: 190, d: 118, seed: 13 }, id: 'grand', osm: '^grand.?place' },
+      { type: 'placeArras', at: grand, rot: 110, params: { w: 190, d: 118, seed: 13 }, id: 'grand', osm: '^grand.?place', osmMax: 450 }, // position estimée ≈ 330 m à côté du réel
       { type: 'cathedraleArras', at: cath, rot: 110 - 90, label: 'Cathédrale', id: 'cathedrale', osm: 'cath[ée]drale' },
     ],
     reserve: [[-95, -30, 95, 26]],
@@ -254,17 +254,17 @@ function lille() {
       { type: 'operaLille', at: [opera[0], opera[1] + 30], rot: 180, label: 'Opéra', id: 'opera', osm: 'op[ée]ra' },
       { type: 'beffroiCCI', at: [cci[0] + 10, cci[1] + 40], rot: 270, label: 'Beffroi de la Chambre de commerce', id: 'cci', osm: 'chambre de commerce|nouvelle bourse' },
       { type: 'vieilleBourse', at: bourse, rot: 180, label: 'Vieille Bourse', id: 'bourse', osm: 'vieille bourse' },
-      { type: 'colonneDeesse', at: grandPlace, rot: 0, id: 'deesse', osm: 'grand.?place|charles de gaulle' },
+      { type: 'colonneDeesse', at: grandPlace, rot: 0, id: 'deesse', osm: '^grand.?place$|g[ée]n[ée]ral.de.gaulle' },
       { type: 'beffroiLille', at: hdv, rot: 297 - 180 - 90, label: 'Beffroi de l’Hôtel de Ville', id: 'hdv', osm: 'h[ôo]tel de ville' },
       { type: 'saintMaurice', at: stMaurice, rot: 270, label: 'Église Saint-Maurice', id: 'stmaurice', osm: 'saint-maurice' },
-      { type: 'lilleEurope', at: europe, rot: Math.atan2(lgvDir[0], lgvDir[1]) * 180 / Math.PI, label: 'Gare Lille-Europe', id: 'europe', osm: 'lille[- ]europe' },
+      { type: 'lilleEurope', at: europe, rot: Math.atan2(lgvDir[0], lgvDir[1]) * 180 / Math.PI, label: 'Gare Lille-Europe', id: 'europe', osm: '^(gare (de )?)?lille[- ]europe$' },
       { type: 'tourDeLille', at: [skiboot[0] + 40, skiboot[1] - 30], rot: 40, label: 'Tour de Lille', id: 'skiboot', osm: 'tour de lille|lyonnais' },
       { type: 'tourLilleurope', at: [lilleurope[0] + 30, lilleurope[1] + 40], rot: 30, label: 'Tour Lilleurope', id: 'lilleurope', osm: 'lilleurope' },
       { type: 'euralille', at: [euralilleC[0] - 20, euralilleC[1] - 40], rot: 60, label: 'Euralille', id: 'euralille', osm: '^euralille' },
       { type: 'espaceHorizon', at: horizon, rot: 55, id: 'horizon-bldg' },
     ],
     reserve: [[-48, -900, 48, 22], [-12, 20, 12, 25], [-36, 20, -24, 35]],
-    noBuild: [[-150, 20, 160, 72]],
+    noBuild: [[-150, 20, 210, 72]], // jusqu'à x = 210 : entrée des véhicules sur le parvis
     pois: {
       'arret-bus': { at: [-50, 36.6], rot: 180, label: 'Arrêt de bus' },
       'depose-minute': { at: [42, 36.6], rot: 180, label: 'Dépose-minute' },

@@ -348,6 +348,7 @@ export function buildCity(plan, { reserve = [], groundY = 0 } = {}) {
           (rand() < 0.62 ? facGeosA : facGeosB).push(extrudeShapeGeo(shapeFromXZ(poly), y, y + h));
         }
         count++;
+        b.built = true;
       } catch { /* polygone dégénéré */ }
     }
   }

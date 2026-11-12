@@ -93,11 +93,28 @@ export class RoadGraph {
     }
   }
 
+  /** Nœuds du plus grand réseau connexe (le découpage autour de la gare laisse des tronçons isolés). */
+  mainComponent(mode) {
+    this.main ??= {};
+    if (this.main[mode]) return this.main[mode];
+    const adj = this.adj[mode], n = this.nodes.length;
+    const comp = new Int32Array(n).fill(-1), sizes = [];
+    for (let i = 0; i < n; i++) {
+      if (comp[i] >= 0 || !adj[i].length) continue;
+      const c = sizes.length, stack = [i];
+      comp[i] = c; let size = 0;
+      while (stack.length) { const u = stack.pop(); size++; for (const [v] of adj[u]) if (comp[v] < 0) { comp[v] = c; stack.push(v); } }
+      sizes.push(size);
+    }
+    const big = sizes.indexOf(Math.max(...sizes));
+    return (this.main[mode] = comp.map((c) => c === big));
+  }
+
   nearest([x, z], mode) {
     let best = -1, bd = Infinity;
-    const adj = this.adj[mode];
+    const main = this.mainComponent(mode);
     for (let i = 0; i < this.nodes.length; i++) {
-      if (!adj[i].length) continue;
+      if (!main[i]) continue;
       const d = (this.nodes[i][0] - x) ** 2 + (this.nodes[i][1] - z) ** 2;
       if (d < bd) { bd = d; best = i; }
     }
@@ -165,6 +182,34 @@ function splitOutside(pts, rects) {
   return parts;
 }
 
+// Au-delà de cette distance, une correspondance de nom est jugée fausse (homonyme).
+const MATCH_MAX = 200;
+
+/**
+ * Les éléments placés à la main (monuments, places, lieux d'arrivée, itinéraires)
+ * sont calculés dans un repère qui suppose l'orientation plan.facadeBearing.
+ * Les voies OSM donnent l'orientation réelle : on reporte ces éléments dans le
+ * repère OSM (local maquette → Est/Nord → local OSM). Le parvis modélisé
+ * (modelZone, éléments « model ») reste en place.
+ */
+function remapToOsmFrame(plan, frame) {
+  const dF = Math.atan2(Math.sin((frame.F - plan.facadeBearing) * D2R), Math.cos((frame.F - plan.facadeBearing) * D2R)) / D2R;
+  if (Math.abs(dF) < 0.5) return;
+  const F = plan.facadeBearing * D2R, c = Math.cos(F), s = Math.sin(F);
+  // inverse de makeFrame(facadeBearing, 20) : la matrice [[-c, s], [s, c]] est sa propre inverse
+  const toEN = ([x, z]) => [-c * x + s * (z - 20), s * x + c * (z - 20)];
+  const zone = plan.modelZone || [-160, -45, 160, 62];
+  const near = ([x, z]) => x > zone[0] && x < zone[2] && z > zone[1] && z < zone[3];
+  const map = (p) => (near(p) ? p : frame.toLocal(toEN(p)));
+  for (const lm of plan.landmarks || []) { lm.at = map(lm.at); if (lm.rot != null) lm.rot += dF; }
+  for (const a of plan.areas || []) if (!a.model) a.poly = a.poly.map(map);
+  for (const p of Object.values(plan.pois || {})) if (!near(p.at)) { p.at = map(p.at); if (p.rot != null) p.rot += dF; }
+  // les arrivées sur le parvis (« …:arrivee ») sont des trajets de maquette : on n'y touche pas
+  for (const k of ['routes', 'walks']) for (const key of Object.keys(plan[k] || {})) if (!key.endsWith(':arrivee')) plan[k][key] = plan[k][key].map(map);
+  if (plan.heights?.center) plan.heights.center = map(plan.heights.center);
+  plan.osmRotation = dF;
+}
+
 /**
  * Remplace le bâti généré, les rues et les voies du plan par les données OSM,
  * et recale les monuments sur leur emprise réelle (recherche par nom).
@@ -182,17 +227,34 @@ export function applyOsm(plan) {
   const bld = osm.buildings.map((b) => ({ poly: b.p.map(T), h: b.h, n: b.n || '' })).filter((b) => b.poly.length >= 3 && !b.poly.every(out));
   const squares = (osm.squares || []).map((s) => ({ poly: s.p.map(T), n: s.n || '' }));
 
-  // recalage des monuments par nom
+  remapToOsmFrame(plan, frame);
+
+  // recalage des monuments par nom : bâtiment ou place nommés, sinon rues piétonnes du même nom
+  const roadGroups = new Map();
+  for (const r of osm.roads) {
+    if (!r.n) continue;
+    const g = roadGroups.get(r.n) || [];
+    for (const q of r.p) g.push(T(q));
+    roadGroups.set(r.n, g);
+  }
   const deltas = {};
   for (const lm of plan.landmarks || []) {
     if (!lm.osm) continue;
     const re = new RegExp(lm.osm, 'i');
-    let best = null, bd = 450;
+    let best = null, bd = lm.osmMax ?? MATCH_MAX;
     for (const c of [...bld, ...squares]) {
       if (!re.test(c.n) || c.poly.length < 3) continue;
       const ce = centroidOf(c.poly);
       const d = Math.hypot(ce[0] - lm.at[0], ce[1] - lm.at[1]) - Math.sqrt(areaOf(c.poly)) * 0.2;
       if (d < bd) { bd = d; best = ce; }
+    }
+    if (!best) {
+      for (const [n, pts] of roadGroups) {
+        if (!re.test(n)) continue;
+        const ce = centroidOf(pts);
+        const d = Math.hypot(ce[0] - lm.at[0], ce[1] - lm.at[1]);
+        if (d < bd) { bd = d; best = ce; }
+      }
     }
     if (best) { deltas[lm.id || lm.type] = [best[0] - lm.at[0], best[1] - lm.at[1]]; lm.at = best; }
   }
@@ -207,7 +269,10 @@ export function applyOsm(plan) {
 
   // surfaces : celles de la maquette + places et parcs réels
   plan.areas = (plan.areas || []).filter((a) => a.model);
-  for (const s of squares) if (s.poly.length >= 3 && !inRects(centroidOf(s.poly), excl)) plan.areas.push({ poly: s.poly, kind: 'square', label: s.n || undefined });
+  // pas de second libellé pour une place déjà nommée par la maquette (« Maréchal Foch » / « Maréchal-Foch »)
+  const norm = (n) => (n || '').normalize('NFD').replace(/[^a-z]/gi, '').toLowerCase();
+  const named = new Set(plan.areas.map((a) => norm(a.label)).filter(Boolean));
+  for (const s of squares) if (s.poly.length >= 3 && !inRects(centroidOf(s.poly), excl)) plan.areas.push({ poly: s.poly, kind: 'square', label: s.n && !named.has(norm(s.n)) ? s.n : undefined });
   for (const p of osm.parks || []) {
     const poly = p.p.map(T);
     if (poly.length >= 3 && !inRects(centroidOf(poly), excl) && areaOf(poly) > 600) plan.areas.push({ poly, kind: 'park', label: areaOf(poly) > 15000 ? p.n : undefined });

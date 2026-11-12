@@ -6,6 +6,7 @@ import { stageDeparture, stageTrain, stageArrival, stageDestination } from './jo
 import { computeTrip } from './journey/trip.js';
 import { toMin, fmt, fmtDur } from './journey/time.js';
 import { setupSettings } from './ui/settings.js';
+import { hasOsm } from './scenes/osm.js';
 
 /* ------------------------------------------------------------------ */
 /*  Données & réglages                                                  */
@@ -19,6 +20,11 @@ let settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('holo-reglages') || '{}')); } catch { /* stockage indisponible */ }
 
 const $ = (s) => document.querySelector(s);
+// licence ODbL : mention obligatoire dès que le bâti et les rues réels sont affichés
+if (hasOsm()) {
+  $('#disclaimer').firstChild.textContent = 'Démonstration — horaires et lieux d’arrivée fictifs';
+  $('#osm-credit').textContent = 'plan © contributeurs OpenStreetMap';
+}
 const engine = new Engine($('#stage'), $('#labels'), settings);
 
 /* ------------------------------------------------------------------ */
